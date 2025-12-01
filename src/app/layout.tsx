@@ -3,6 +3,7 @@ import { ConvexClientProvider } from "./ConvexClientProvider";
 
 import "./globals.css";
 import { Footer } from "@/components/ui/Footer";
+import { CartProvider } from "./context/cart-context";
 
 export default async function RootLayout({
   children,
@@ -17,9 +18,11 @@ export default async function RootLayout({
     <html lang="en">
       <body>
         <ConvexClientProvider>
-          <Navbar cartCount={cartCount} isAuthenticated={isAuthenticated} />
-          <main>{children}</main>
-          <Footer />
+          <CartProvider >
+            <Navbar cartCount={cartCount} isAuthenticated={isAuthenticated} />
+            <main>{children}</main>
+            <Footer />
+          </CartProvider>
         </ConvexClientProvider>
 
       </body>
