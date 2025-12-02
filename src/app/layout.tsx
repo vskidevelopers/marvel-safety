@@ -1,5 +1,6 @@
 import { Navbar } from "@/components/ui/navbar";
 import { ConvexClientProvider } from "./ConvexClientProvider";
+import { Toaster } from "sonner";
 
 import "./globals.css";
 import { Footer } from "@/components/ui/Footer";
@@ -21,6 +22,10 @@ export default async function RootLayout({
           <CartProvider >
             <Navbar cartCount={cartCount} isAuthenticated={isAuthenticated} />
             <main>{children}</main>
+            <Toaster
+              position="top-right"
+              richColors // ← Safety-orange accents
+            />
             <Footer />
           </CartProvider>
         </ConvexClientProvider>
