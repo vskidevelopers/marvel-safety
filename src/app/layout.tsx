@@ -15,6 +15,8 @@ export default async function RootLayout({
   // TODO: Fetch real cart count from Convex
   const cartCount = 0; // Replace with real data later
 
+
+
   return (
     <html lang="en">
       <body>

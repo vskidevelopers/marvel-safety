@@ -56,6 +56,11 @@ export function Navbar({ cartCount = 0, isAuthenticated = false }: NavbarProps) 
 
     const isActive = (href: string) => pathname === href;
 
+
+
+    // Hide standard header on admin pages
+    if (pathname?.startsWith("/admin")) return null
+
     return (
         <header
             className={`sticky top-0 z-50 transition-all duration-300 ${isScrolled ? "bg-white/90 backdrop-blur-sm shadow-sm" : "bg-white"
