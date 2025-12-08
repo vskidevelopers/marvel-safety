@@ -1,10 +1,11 @@
 import { Navbar } from "@/components/ui/navbar";
-import { ConvexClientProvider } from "./ConvexClientProvider";
+import ConvexClientProvider from "./ConvexClientProvider";
 import { Toaster } from "sonner";
 
 import "./globals.css";
 import { Footer } from "@/components/ui/Footer";
 import { CartProvider } from "./context/cart-context";
+import { ClerkProvider } from "@clerk/nextjs";
 
 export default async function RootLayout({
   children,
@@ -15,22 +16,27 @@ export default async function RootLayout({
   // TODO: Fetch real cart count from Convex
   const cartCount = 0; // Replace with real data later
 
+  // Cast Navbar to any to allow passing props until the Navbar component's props are properly typed.
+  const NavbarAny = Navbar as any;
+
 
 
   return (
     <html lang="en">
       <body>
-        <ConvexClientProvider>
-          <CartProvider >
-            <Navbar cartCount={cartCount} isAuthenticated={isAuthenticated} />
-            <main>{children}</main>
-            <Toaster
-              position="top-right"
-              richColors // ← Safety-orange accents
-            />
-            <Footer />
-          </CartProvider>
-        </ConvexClientProvider>
+        <ClerkProvider>
+          <ConvexClientProvider>
+            <CartProvider >
+              <NavbarAny cartCount={cartCount} isAuthenticated={isAuthenticated} />
+              {children}
+              <Toaster
+                position="top-right"
+                richColors // ← Safety-orange accents
+              />
+              <Footer />
+            </CartProvider>
+          </ConvexClientProvider>
+        </ClerkProvider>
 
       </body>
     </html>
