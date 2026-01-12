@@ -18,6 +18,7 @@ export default function ConvexClientProvider({
     //     const setupAuth = async () => {
     //         if (!isLoaded) return;
 
+<<<<<<< HEAD
     //         try {
     //             if (userId) {
     //                 const token = await getToken({ template: "convex" });
@@ -29,6 +30,19 @@ export default function ConvexClientProvider({
     //             console.error("Auth setup failed", error);
     //             convex.setAuth(undefined);
     //         }
+=======
+            try {
+                if (userId) {
+                    const token = await getToken({ template: "convex" });
+                    convex.setAuth(token || "");
+                } else {
+                    convex.setAuth("");
+                }
+            } catch (error) {
+                console.error("Auth setup failed", error);
+                convex.setAuth("");
+            }
+>>>>>>> 4b6b1a0a6586fc76549fc9a61ac73e4399ab2c7e
 
     //         setReady(true);
     //     };
