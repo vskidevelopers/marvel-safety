@@ -8,6 +8,7 @@ import { api } from "../../../../../convex/_generated/api";
 import { Upload, Plus, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/categories";
+import { toast } from "sonner";
 
 export default function NewProductPage() {
     const [formData, setFormData] = useState({
@@ -40,25 +41,25 @@ export default function NewProductPage() {
     const createProduct = useMutation(api.products.create);
     const router = useRouter();
 
-    
+
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-        ) => {
-            const { name, value, type } = e.target;
-            const checked = (e.target as HTMLInputElement).checked;
+    ) => {
+        const { name, value, type } = e.target;
+        const checked = (e.target as HTMLInputElement).checked;
 
-            if (name.startsWith("specs.")) {
-                const specKey = name.split(".")[1];
-                setFormData({
-                    ...formData,
-                    specs: { ...formData.specs, [specKey]: value },
-                });
-            } else if (type === "checkbox") {
-                setFormData({ ...formData, [name]: checked });
-            } else {
-                setFormData({ ...formData, [name]: value });
-            }
-        };
+        if (name.startsWith("specs.")) {
+            const specKey = name.split(".")[1];
+            setFormData({
+                ...formData,
+                specs: { ...formData.specs, [specKey]: value },
+            });
+        } else if (type === "checkbox") {
+            setFormData({ ...formData, [name]: checked });
+        } else {
+            setFormData({ ...formData, [name]: value });
+        }
+    };
 
     const handleCertificationChange = (cert: string, isChecked: boolean) => {
         if (isChecked) {
@@ -98,11 +99,12 @@ export default function NewProductPage() {
         return Object.keys(newErrors).length === 0;
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-         setIsSubmitting(true);
 
-            try {
+    const handleSubmit = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setIsSubmitting(true);
+
+        try {
             // Prepare data for Convex
             const productData = {
                 name: formData.name,
@@ -120,11 +122,11 @@ export default function NewProductPage() {
                 primaryImage: formData.primaryImage,
                 additionalImages: formData.additionalImages.split(',').map(img => img.trim()).filter(Boolean),
                 specs: {
-                material: formData.specs.material || undefined,
-                size: formData.specs.size || undefined,
-                color: formData.specs.color || undefined,
-                weight: formData.specs.weight ? parseFloat(formData.specs.weight) : undefined,
-                resistance: [], // Add if needed
+                    material: formData.specs.material || undefined,
+                    size: formData.specs.size || undefined,
+                    color: formData.specs.color || undefined,
+                    weight: formData.specs.weight ? parseFloat(formData.specs.weight) : undefined,
+                    resistance: [], // Add if needed
                 },
                 sku: formData.sku,
                 supplier: formData.supplier || undefined,
@@ -132,16 +134,16 @@ export default function NewProductPage() {
 
             // Call Convex mutation
             await createProduct({ product: productData });
-            
+
             toast.success("Product created successfully!");
             router.push("/admin/products");
-            
-            } catch (error) {
+
+        } catch (error) {
             console.error("Create product error:", error);
             toast.error("Failed to create product. Please check your data.");
-            } finally {
+        } finally {
             setIsSubmitting(false);
-            }
+        }
     };
 
     const CERTIFICATION_OPTIONS = ["KEBS", "EN397", "EN166", "EN149", "ISO 45001", "ANSI Z87.1"];
