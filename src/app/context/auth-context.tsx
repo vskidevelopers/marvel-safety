@@ -35,7 +35,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.setItem("marvel-auth", "true");
       return true;
     }
-    
+
     return false;
   };
 
@@ -43,6 +43,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setIsAuthenticated(false);
     localStorage.removeItem("marvel-auth");
   };
+
+
 
   return (
     <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>

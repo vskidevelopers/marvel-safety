@@ -10,8 +10,8 @@ import { useAuth } from "../context/auth-context";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@marvelsafety.co.ke");
+  const [password, setPassword] = useState("safety123");
   const [isLoading, setIsLoading] = useState(false);
   const { login } = useAuth();
   const router = useRouter();
@@ -24,7 +24,7 @@ export default function LoginPage() {
       const success = await login(email, password);
       if (success) {
         toast.success("Login successful!");
-        router.push("/admin");
+        router.push("/admin/dashboard");
       } else {
         toast.error("Invalid email or password");
       }

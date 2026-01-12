@@ -1,34 +1,33 @@
-import { auth } from "@clerk/nextjs/server";
-import { useRouter } from "next/navigation";
-import AdminSidebarLayout from "./admin-sidebar-layout";
-import { useAuth } from "@/context/auth-context";
+// app/admin/layout.tsx
+"use client";
 
-export default async function AdminRootLayout({
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/app/context/auth-context";
+import AdminSidebarLayout from "./admin-sidebar-layout";
+
+export default function AdminRootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const { isAuthenticated, loading } = useAuth();
+    const router = useRouter();
 
-      const { isAuthenticated, loading } = useAuth();
-  const router = useRouter();
+    useEffect(() => {
+        if (!loading && !isAuthenticated) {
+            console.log("User is not authenticated, redirecting to login.");
+            router.push("/");
+        }
+    }, [isAuthenticated, loading, router]);
 
-  useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      router.push("/login");
+    if (loading || !isAuthenticated) {
+        return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>;
     }
-  }, [isAuthenticated, loading, router]);
-
-  if (loading || !isAuthenticated) {
-    return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>;
-  }
-
-
 
     return (
-        <html lang="en">
-            <body>
-                <AdminSidebarLayout>{children}</AdminSidebarLayout>
-            </body>
-        </html>
+        <body>
+            <AdminSidebarLayout>{children}</AdminSidebarLayout>
+        </body>
     );
 }

@@ -1,5 +1,5 @@
 import { Navbar } from "@/components/ui/navbar";
-import ConvexClientProvider from "./ConvexClientProvider";
+// import ConvexClientProvider from "./ConvexClientProvider";
 import { AuthProvider } from "./context/auth-context";
 import { Toaster } from "sonner";
 
@@ -26,19 +26,19 @@ export default async function RootLayout({
     <html lang="en">
       <body>
 
-        <ConvexClientProvider>
-          <AuthProvider>
-            <CartProvider >
-              <NavbarAny cartCount={cartCount} isAuthenticated={isAuthenticated} />
-              {children}
-              <Toaster
-                position="top-right"
-                richColors // ← Safety-orange accents
-              />
-              <Footer />
-            </CartProvider>
-          </AuthProvider >
-        </ConvexClientProvider>
+        {/* <ConvexClientProvider> */}
+        <AuthProvider>
+          <CartProvider >
+            <NavbarAny cartCount={cartCount} isAuthenticated={isAuthenticated} />
+            {children}
+            <Toaster
+              position="top-right"
+              richColors // ← Safety-orange accents
+            />
+            <Footer />
+          </CartProvider>
+        </AuthProvider >
+        {/* </ConvexClientProvider> */}
 
 
 

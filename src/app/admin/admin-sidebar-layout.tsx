@@ -3,7 +3,7 @@
 
 import { useState, useEffect, useTransition } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
     LayoutDashboard,
     Package,
@@ -13,6 +13,9 @@ import {
     Menu,
     X
 } from "lucide-react";
+import { useAuth } from "../context/auth-context";
+import { toast } from "sonner";
+
 
 export default function AdminSidebarLayout({
     children,
@@ -22,6 +25,9 @@ export default function AdminSidebarLayout({
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [, startTransition] = useTransition();
     const pathname = usePathname();
+    const { logout } = useAuth();
+    const router = useRouter();
+
 
     // Close sidebar on route change (mobile)
     useEffect(() => {
@@ -29,6 +35,14 @@ export default function AdminSidebarLayout({
             setSidebarOpen(false);
         });
     }, [pathname]);
+
+    const handleLogout = () => {
+        logout();
+        toast.success("Logged out successfully");
+        console.log("logging out and redirecting to /products");
+
+        router.push("/products");
+    };
 
     const navItems = [
         { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
@@ -101,10 +115,7 @@ export default function AdminSidebarLayout({
 
                 <div className="p-4 border-t border-gray-800 mt-auto">
                     <button
-                        onClick={() => {
-                            // TODO: Add real sign-out with Convex Auth
-                            console.log("Sign out clicked");
-                        }}
+                        onClick={handleLogout}
                         className="flex items-center gap-3 px-4 py-2.5 text-gray-300 hover:text-white w-full transition-colors rounded-lg hover:bg-gray-800"
                     >
                         <LogOut className="h-5 w-5" />
