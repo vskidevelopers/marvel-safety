@@ -1,7 +1,5 @@
 // convex/products.ts
-import { mutation } from "_generated/server";
-
-import { id } from "../_generated/server";
+import { mutation } from "./_generated/server";
 import { v } from "convex/values";
 
 // Define input schema

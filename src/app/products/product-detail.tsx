@@ -42,6 +42,13 @@ interface Product {
     sku: string;
 }
 
+// CartItem type used when adding products to the cart
+type CartItem = Product & {
+    quantity: number;
+    subtotal: number;
+    image: string;
+};
+
 export function ProductDetail({ product }: { product: Product }) {
 
     const { addToCart } = useCart();
@@ -64,7 +71,15 @@ export function ProductDetail({ product }: { product: Product }) {
 
         // 4. Add to cart
         try {
-            addToCart(product);
+            const quantity = 1;
+            const price = typeof product.price === "string" ? parseFloat(product.price) || 0 : (product.price ?? 0);
+            const cartItem: CartItem = {
+                ...product,
+                quantity,
+                subtotal: price * quantity,
+                image: (product as any).primaryImage ?? (product as any).additionalImages?.[0] ?? "",
+            };
+            addToCart(cartItem);
             console.log("🛒 Added to cart successfully", {
                 productId: product.id,
                 quantity: 1

@@ -38,7 +38,8 @@ export default function NewProductPage() {
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const createProduct = useMutation(api.products.create);
+    // api may be typed as an empty object in some setups; cast to any to access generated functions
+    const createProduct = useMutation((api as any).products.create);
     const router = useRouter();
 
 
@@ -91,7 +92,6 @@ export default function NewProductPage() {
 
         if (!formData.name.trim()) newErrors.name = "Product name is required";
         if (!formData.price || parseFloat(formData.price) <= 0) newErrors.price = "Valid price is required";
-        if (!formData.stockCount || parseInt(formData.stockCount) < 0) newErrors.stockCount = "Valid stock count required";
         if (!formData.sku.trim()) newErrors.sku = "SKU is required";
         if (formData.certifications.length === 0) newErrors.certifications = "At least one certification required";
 
@@ -114,19 +114,22 @@ export default function NewProductPage() {
                 price: parseFloat(formData.price) || 0,
                 oldPrice: formData.oldPrice ? parseFloat(formData.oldPrice) : undefined,
                 inStock: formData.inStock,
-                stockCount: parseInt(formData.stockCount) || 0,
                 category: formData.category,
                 subcategory: formData.subcategory || undefined,
                 tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-                certifications: formData.certifications.split(',').map(c => c.trim()).filter(Boolean),
-                primaryImage: formData.primaryImage,
-                additionalImages: formData.additionalImages.split(',').map(img => img.trim()).filter(Boolean),
+                // formData.certifications is already an array of strings
+                certifications: formData.certifications,
+                // use uploaded image previews for primary and additional images
+                primaryImage: imagePreviews.length > 0 ? imagePreviews[0] : undefined,
+                additionalImages: imagePreviews.length > 1 ? imagePreviews.slice(1) : [],
                 specs: {
                     material: formData.specs.material || undefined,
                     size: formData.specs.size || undefined,
                     color: formData.specs.color || undefined,
                     weight: formData.specs.weight ? parseFloat(formData.specs.weight) : undefined,
-                    resistance: [], // Add if needed
+                    resistance: formData.specs.resistance
+                        ? formData.specs.resistance.split(',').map(r => r.trim()).filter(Boolean)
+                        : undefined,
                 },
                 sku: formData.sku,
                 supplier: formData.supplier || undefined,
