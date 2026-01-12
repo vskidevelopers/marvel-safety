@@ -21,13 +21,13 @@ export default function ConvexClientProvider({
             try {
                 if (userId) {
                     const token = await getToken({ template: "convex" });
-                    convex.setAuth(token || any);
+                    convex.setAuth(token || null);
                 } else {
-                    convex.setAuth(any);
+                    convex.setAuth(null);
                 }
             } catch (error) {
                 console.error("Auth setup failed", error);
-                convex.setAuth(any);
+                convex.setAuth(null);
             }
 
             setReady(true);
