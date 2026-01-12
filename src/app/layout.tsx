@@ -1,11 +1,12 @@
 import { Navbar } from "@/components/ui/navbar";
 import ConvexClientProvider from "./ConvexClientProvider";
+import { AuthProvider } from "./context/auth-context";
 import { Toaster } from "sonner";
 
 import "./globals.css";
 import { Footer } from "@/components/ui/Footer";
 import { CartProvider } from "./context/cart-context";
-import { ClerkProvider } from "@clerk/nextjs";
+// import { ClerkProvider } from "@clerk/nextjs";
 
 export default async function RootLayout({
   children,
@@ -24,8 +25,9 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        <ClerkProvider>
-          <ConvexClientProvider>
+
+        <ConvexClientProvider>
+          <AuthProvider>
             <CartProvider >
               <NavbarAny cartCount={cartCount} isAuthenticated={isAuthenticated} />
               {children}
@@ -35,8 +37,10 @@ export default async function RootLayout({
               />
               <Footer />
             </CartProvider>
-          </ConvexClientProvider>
-        </ClerkProvider>
+          </AuthProvider >
+        </ConvexClientProvider>
+
+
 
       </body>
     </html>

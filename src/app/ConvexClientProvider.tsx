@@ -14,27 +14,27 @@ export default function ConvexClientProvider({
     const { getToken, isLoaded, userId } = useAuth();
     const [ready, setReady] = useState(false);
 
-    useEffect(() => {
-        const setupAuth = async () => {
-            if (!isLoaded) return;
+    // useEffect(() => {
+    //     const setupAuth = async () => {
+    //         if (!isLoaded) return;
 
-            try {
-                if (userId) {
-                    const token = await getToken({ template: "convex" });
-                    convex.setAuth(token || undefined);
-                } else {
-                    convex.setAuth(undefined);
-                }
-            } catch (error) {
-                console.error("Auth setup failed", error);
-                convex.setAuth(undefined);
-            }
+    //         try {
+    //             if (userId) {
+    //                 const token = await getToken({ template: "convex" });
+    //                 convex.setAuth(token || undefined);
+    //             } else {
+    //                 convex.setAuth(undefined);
+    //             }
+    //         } catch (error) {
+    //             console.error("Auth setup failed", error);
+    //             convex.setAuth(undefined);
+    //         }
 
-            setReady(true);
-        };
+    //         setReady(true);
+    //     };
 
-        setupAuth();
-    }, [isLoaded, userId, getToken]);
+    //     setupAuth();
+    // }, [isLoaded, userId, getToken]);
 
     if (!ready) {
         return <div className="min-h-screen flex items-center justify-center">Loading...</div>;

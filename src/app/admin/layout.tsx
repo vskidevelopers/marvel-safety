@@ -1,19 +1,28 @@
 import { auth } from "@clerk/nextjs/server";
-import { redirect } from "next/navigation";
+import { useRouter } from "next/navigation";
 import AdminSidebarLayout from "./admin-sidebar-layout";
+import { useAuth } from "@/context/auth-context";
 
 export default async function AdminRootLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    // Protect ONLY admin routes
-    // const { userId } = await auth();
-    const userId = true
-    if (!userId) {
-        // Redirect to login WITH return URL
-        redirect("/sign-in?redirect_url=/admin");
+
+      const { isAuthenticated, loading } = useAuth();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (!loading && !isAuthenticated) {
+      router.push("/login");
     }
+  }, [isAuthenticated, loading, router]);
+
+  if (loading || !isAuthenticated) {
+    return <div className="min-h-screen flex items-center justify-center">Redirecting...</div>;
+  }
+
+
 
     return (
         <html lang="en">

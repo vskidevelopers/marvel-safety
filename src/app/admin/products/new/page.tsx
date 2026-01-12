@@ -2,6 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { useMutation } from "convex/react";
+import { api } from "../../../../../convex/_generated/api";
 import { Upload, Plus, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/categories";
@@ -14,7 +17,6 @@ export default function NewProductPage() {
         shortDescription: "",
         price: "",
         oldPrice: "",
-        stockCount: "",
         inStock: true,
         category: CATEGORIES[0].id,
         subcategory: "",
@@ -30,29 +32,33 @@ export default function NewProductPage() {
         sku: "",
         supplier: "",
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const [images, setImages] = useState<File[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const createProduct = useMutation(api.products.create);
+    const router = useRouter();
 
+    
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-    ) => {
-        const { name, value, type } = e.target;
-        const checked = (e.target as HTMLInputElement).checked;
+        ) => {
+            const { name, value, type } = e.target;
+            const checked = (e.target as HTMLInputElement).checked;
 
-        if (name.startsWith("specs.")) {
-            const specKey = name.split(".")[1];
-            setFormData({
-                ...formData,
-                specs: { ...formData.specs, [specKey]: value },
-            });
-        } else if (type === "checkbox") {
-            setFormData({ ...formData, [name]: checked });
-        } else {
-            setFormData({ ...formData, [name]: value });
-        }
-    };
+            if (name.startsWith("specs.")) {
+                const specKey = name.split(".")[1];
+                setFormData({
+                    ...formData,
+                    specs: { ...formData.specs, [specKey]: value },
+                });
+            } else if (type === "checkbox") {
+                setFormData({ ...formData, [name]: checked });
+            } else {
+                setFormData({ ...formData, [name]: value });
+            }
+        };
 
     const handleCertificationChange = (cert: string, isChecked: boolean) => {
         if (isChecked) {
@@ -94,12 +100,48 @@ export default function NewProductPage() {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+         setIsSubmitting(true);
 
-        if (!validate()) return;
+            try {
+            // Prepare data for Convex
+            const productData = {
+                name: formData.name,
+                slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
+                description: formData.description,
+                shortDescription: formData.shortDescription,
+                price: parseFloat(formData.price) || 0,
+                oldPrice: formData.oldPrice ? parseFloat(formData.oldPrice) : undefined,
+                inStock: formData.inStock,
+                stockCount: parseInt(formData.stockCount) || 0,
+                category: formData.category,
+                subcategory: formData.subcategory || undefined,
+                tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
+                certifications: formData.certifications.split(',').map(c => c.trim()).filter(Boolean),
+                primaryImage: formData.primaryImage,
+                additionalImages: formData.additionalImages.split(',').map(img => img.trim()).filter(Boolean),
+                specs: {
+                material: formData.specs.material || undefined,
+                size: formData.specs.size || undefined,
+                color: formData.specs.color || undefined,
+                weight: formData.specs.weight ? parseFloat(formData.specs.weight) : undefined,
+                resistance: [], // Add if needed
+                },
+                sku: formData.sku,
+                supplier: formData.supplier || undefined,
+            };
 
-        // TODO: Integrate with Convex mutation
-        console.log("Submitting product:", { ...formData, images });
-        alert("Product created successfully!");
+            // Call Convex mutation
+            await createProduct({ product: productData });
+            
+            toast.success("Product created successfully!");
+            router.push("/admin/products");
+            
+            } catch (error) {
+            console.error("Create product error:", error);
+            toast.error("Failed to create product. Please check your data.");
+            } finally {
+            setIsSubmitting(false);
+            }
     };
 
     const CERTIFICATION_OPTIONS = ["KEBS", "EN397", "EN166", "EN149", "ISO 45001", "ANSI Z87.1"];
@@ -228,7 +270,7 @@ export default function NewProductPage() {
                                 />
                             </div>
 
-                            <div>
+                            {/* <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Stock Quantity <span className="text-red-500">*</span>
                                 </label>
@@ -247,7 +289,7 @@ export default function NewProductPage() {
                                         <AlertCircle className="h-3 w-3" /> {errors.stockCount}
                                     </p>
                                 )}
-                            </div>
+                            </div> */}
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
