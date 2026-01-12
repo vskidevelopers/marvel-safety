@@ -89,11 +89,11 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center text-xs text-gray-500">
+          {/* <div className="mt-6 text-center text-xs text-gray-500">
             <p>Demo credentials:</p>
             <p className="font-mono">Email: admin@marvelsafety.co.ke</p>
             <p className="font-mono">Password: safety123</p>
-          </div>
+          </div> */}
         </div>
       </div>
     </>
