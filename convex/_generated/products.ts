@@ -1,5 +1,5 @@
 // convex/products.ts
-import { mutation } from "convex/server";
+import { mutation } from "convex/functions";
 import { api, internal } from "../_generated/api";
 import { id } from "../_generated/server";
 import { v } from "convex/values";
@@ -33,17 +33,17 @@ const productSchema = v.object({
 export const create = mutation({
   // Validate input
   args: { product: productSchema },
-  
+
   handler: async (ctx, args) => {
     // Add timestamp
     const productData = {
       ...args.product,
       dateAdded: Date.now(),
     };
-    
+
     // Insert into DB
     const productId = await ctx.db.insert("products", productData);
-    
+
     return { id: productId, ...productData };
   },
 });
