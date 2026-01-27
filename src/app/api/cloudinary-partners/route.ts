@@ -7,9 +7,11 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const CHUNK_SIZE = 6000000;
+
 export async function POST(req: NextRequest) {
   try {
-    // Use the FULL folder path as it appears in Cloudinary
+    // Use  the FULL folder path as it appears in Cloudinary
     const folderPath = "partners"; // ← Must match folder structure
 
     // Fetch all assets in the asset folder
@@ -20,7 +22,7 @@ export async function POST(req: NextRequest) {
         (error, response) => {
           if (error) reject(error);
           else resolve(response);
-        }
+        },
       );
     });
 

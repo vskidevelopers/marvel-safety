@@ -5,27 +5,105 @@ import { useRouter } from "next/navigation";
 import { ShieldCheck, Smartphone, Truck, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "../context/cart-context";
+import { useOrderFunctions } from "@/lib/hooks/useOrderFunctions";
+import type { OrderData } from "../types/order";
 
 export default function CheckoutPage() {
-    const { cart, totalPrice } = useCart();
+    const { items, totalPrice, clearCart } = useCart();
+    const { addOrder } = useOrderFunctions();
     const router = useRouter();
     const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "cod">("cod");
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    // Handle empty cart
+    if (items.length === 0) {
+        return (
+            <div className="container mx-auto px-4 py-8 text-center">
+                <h1 className="text-2xl font-bold mb-4">Your cart is empty</h1>
+                <button
+                    onClick={() => router.push("/products")}
+                    className="bg-orange-600 hover:bg-orange-700 text-white px-6 py-3 rounded-lg"
+                >
+                    Browse Products
+                </button>
+            </div>
+        );
+    }
+
+    // Calculate totals
+    const subtotal = totalPrice;
+    const vat = subtotal * 0.16;
+    const delivery = 300;
+    const grandTotal = subtotal + vat + delivery;
+
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
-        // Simulate order submission
-        setTimeout(() => {
-            toast.success("Order placed successfully!", {
-                description: paymentMethod === "mpesa"
-                    ? "M-Pesa confirmation received"
-                    : "Delivery agent will contact you",
-                duration: 5000,
+        try {
+            const formData = new FormData(e.target as HTMLFormElement);
+            const fullName = formData.get("fullName") as string;
+            const phone = formData.get("phone") as string;
+            const location = formData.get("location") as string;
+            const city = formData.get("city") as string;
+            const mpesaCode = paymentMethod === "mpesa"
+                ? formData.get("mpesaCode") as string
+                : undefined;
+
+            // Validate required fields
+            if (!fullName || !phone || !location || !city) {
+                throw new Error("Please fill in all required fields");
+            }
+
+            if (paymentMethod === "mpesa" && (!mpesaCode || mpesaCode.trim() === "")) {
+                throw new Error("M-Pesa confirmation code is required");
+            }
+
+            // Prepare order data with proper typing
+            const orderData: Omit<OrderData, "status"> = {
+                customer: { fullName, phone, location, city },
+                payment: { method: paymentMethod, mpesaCode },
+                items: items.map(item => ({
+                    id: item.id,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    image: item.image,
+                    sku: item.sku,
+                })),
+                totals: { subtotal, vat, delivery, grandTotal },
+            };
+            // log to console
+            console.log("🛒 Order Data:", orderData);
+            // Save to Firebase
+            const result = await addOrder(orderData);
+
+            if (result.success && result.orderId) {
+                // Save order ID to localStorage
+                localStorage.setItem("marvel-last-order-id", result.orderId);
+                // Clear cart
+                clearCart();
+                // Show success message
+                toast.success("Order placed successfully!", {
+                    description: paymentMethod === "mpesa"
+                        ? "M-Pesa confirmation received. Order processing..."
+                        : "Delivery agent will contact you within 24 hours",
+                    duration: 5000,
+                });
+                // Redirect to confirmation
+                router.push(`/order/${result.orderId}`);
+            } else {
+                throw new Error(result.error || "Failed to create order");
+            }
+
+        } catch (error: any) {
+            toast.error("Order failed", {
+                description: error.message || "Please try again",
             });
-            router.push(`/order/${Date.now()}`);
-        }, 1500);
+            console.error("Checkout error:", error);
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     return (
@@ -36,7 +114,6 @@ export default function CheckoutPage() {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Left Column: Form */}
                     <div className="lg:col-span-2 space-y-6">
-                        {/* Shipping Information */}
                         <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                             <div className="flex items-center gap-3 mb-4">
                                 <Truck className="h-5 w-5 text-orange-600" />
@@ -48,6 +125,7 @@ export default function CheckoutPage() {
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-700">Full Name</label>
                                         <input
+                                            name="fullName"
                                             type="text"
                                             required
                                             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
@@ -58,6 +136,7 @@ export default function CheckoutPage() {
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-700">Phone Number</label>
                                         <input
+                                            name="phone"
                                             type="tel"
                                             required
                                             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
@@ -68,6 +147,7 @@ export default function CheckoutPage() {
                                     <div className="space-y-2 md:col-span-2">
                                         <label className="text-sm font-medium text-gray-700">Delivery Location</label>
                                         <input
+                                            name="location"
                                             type="text"
                                             required
                                             className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
@@ -77,7 +157,11 @@ export default function CheckoutPage() {
 
                                     <div className="space-y-2">
                                         <label className="text-sm font-medium text-gray-700">City/Town</label>
-                                        <select className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white transition">
+                                        <select
+                                            name="city"
+                                            className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white transition"
+                                            defaultValue="Nairobi"
+                                        >
                                             <option>Nairobi</option>
                                             <option>Mombasa</option>
                                             <option>Kisumu</option>
@@ -109,7 +193,7 @@ export default function CheckoutPage() {
                                         >
                                             <div className="flex items-center gap-2 mb-2">
                                                 <div className="bg-emerald-100 text-emerald-800 text-xs font-bold px-2 py-0.5 rounded">
-                                                    POPULAR
+                                                    RECOMMENDED
                                                 </div>
                                                 <span className="font-medium">Pay on Delivery</span>
                                             </div>
@@ -145,17 +229,18 @@ export default function CheckoutPage() {
                                                 <li>Select <strong>Lipa na M-Pesa</strong></li>
                                                 <li>Choose <strong>Buy Goods & Services</strong></li>
                                                 <li>Enter Till Number: <span className="font-bold bg-white px-1 rounded">8930612</span></li>
-                                                <li>Enter Amount: <span className="font-bold bg-white px-1 rounded">KES {totalPrice}</span></li>
+                                                <li>Enter Amount: <span className="font-bold bg-white px-1 rounded">KES {grandTotal.toFixed(2)}</span></li>
                                                 <li>Enter your M-Pesa PIN</li>
                                             </ol>
 
                                             <div className="mt-3">
                                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    M-Pesa Confirmation Code
+                                                    M-Pesa Confirmation Code *
                                                 </label>
                                                 <input
+                                                    name="mpesaCode"
                                                     type="text"
-                                                    required={paymentMethod === "mpesa"}
+                                                    required
                                                     className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
                                                     placeholder="Enter M-Pesa code (e.g., SAM0...)"
                                                     autoComplete="off"
@@ -182,7 +267,7 @@ export default function CheckoutPage() {
                                     ) : (
                                         <>
                                             <ShieldCheck className="h-5 w-5" />
-                                            Place Order
+                                            Place Order - KES {grandTotal.toLocaleString()}
                                         </>
                                     )}
                                 </button>
@@ -200,7 +285,7 @@ export default function CheckoutPage() {
                             <h2 className="font-bold text-lg mb-4 text-gray-900">Order Summary</h2>
 
                             <div className="space-y-4 mb-5">
-                                {cart.items.map((item) => (
+                                {items.map((item) => (
                                     <div key={item.id} className="flex gap-3">
                                         <div className="relative w-12 h-12 bg-white rounded border border-gray-200 shrink-0">
                                             <img
@@ -218,13 +303,12 @@ export default function CheckoutPage() {
                                             <p className="text-sm font-medium text-gray-900 line-clamp-1">
                                                 {item.name}
                                             </p>
-                                            <div className="text-xs text-gray-500 mt-0.5">
-                                                {item.specs.color && <span>{item.specs.color}</span>}
-                                                {item.specs.size && <span> • {item.specs.size}</span>}
-                                            </div>
+                                            <p className="text-xs text-gray-500 mt-0.5">
+                                                Qty: {item.quantity}
+                                            </p>
                                         </div>
                                         <p className="text-sm font-bold text-gray-900 whitespace-nowrap">
-                                            KES {item.subtotal}
+                                            KES {(item.price * item.quantity).toLocaleString()}
                                         </p>
                                     </div>
                                 ))}
@@ -233,19 +317,19 @@ export default function CheckoutPage() {
                             <div className="border-t border-gray-200 pt-4 space-y-2 text-sm">
                                 <div className="flex justify-between text-gray-600">
                                     <span>Subtotal</span>
-                                    <span>KES {totalPrice}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Delivery</span>
-                                    <span className="font-medium">KES 300</span>
+                                    <span>KES {subtotal.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-600">
                                     <span>VAT (16%)</span>
-                                    <span>KES {(totalPrice * 0.16)}</span>
+                                    <span>KES {vat.toFixed(2)}</span>
+                                </div>
+                                <div className="flex justify-between text-gray-600">
+                                    <span>Delivery</span>
+                                    <span className="font-medium">KES {delivery}</span>
                                 </div>
                                 <div className="flex justify-between font-bold text-lg text-gray-900 pt-2 border-t border-dashed border-gray-300">
                                     <span>Total</span>
-                                    <span>KES {(totalPrice + 300 + totalPrice * 0.16)}</span>
+                                    <span>KES {grandTotal.toLocaleString()}</span>
                                 </div>
                             </div>
 

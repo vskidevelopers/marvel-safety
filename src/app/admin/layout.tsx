@@ -26,8 +26,8 @@ export default function AdminRootLayout({
     }
 
     return (
-        <body>
+        <>
             <AdminSidebarLayout>{children}</AdminSidebarLayout>
-        </body>
+        </>
     );
 }

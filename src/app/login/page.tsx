@@ -10,10 +10,10 @@ import { useAuth } from "../context/auth-context";
 import { toast } from "sonner";
 
 export default function LoginPage() {
-  const [email, setEmail] = useState("admin@marvelsafety.co.ke");
-  const [password, setPassword] = useState("safety123");
+  const [email, setEmail] = useState("marvelsafetyhub@gmail.com");
+  const [password, setPassword] = useState("marvel3345");
   const [isLoading, setIsLoading] = useState(false);
-  const { login } = useAuth();
+  const { signin } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -21,7 +21,7 @@ export default function LoginPage() {
     setIsLoading(true);
 
     try {
-      const success = await login(email, password);
+      const success = await signin(email, password);
       if (success) {
         toast.success("Login successful!");
         router.push("/admin/dashboard");

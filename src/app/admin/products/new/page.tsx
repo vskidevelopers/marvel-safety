@@ -3,11 +3,11 @@
 import { useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMutation } from "convex/react";
-import { api } from "../../../../../convex/_generated/api";
 import { Upload, Plus, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/categories";
+import { useCloudinaryUpload } from "@/lib/hooks/useCloudinaryUpload";
+import { useProductFunctions } from "@/lib/firebase";
 import { toast } from "sonner";
 
 export default function NewProductPage() {
@@ -35,12 +35,13 @@ export default function NewProductPage() {
     });
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const [images, setImages] = useState<File[]>([]);
+    const [images, setImages] = useState<string[]>([]);
     const [imagePreviews, setImagePreviews] = useState<string[]>([]);
     const [errors, setErrors] = useState<Record<string, string>>({});
     // api may be typed as an empty object in some setups; cast to any to access generated functions
-    const createProduct = useMutation((api as any).products.create);
     const router = useRouter();
+    const { uploadImage, isUploading, error: uploadError } = useCloudinaryUpload();
+    const { addProduct } = useProductFunctions();
 
 
     const handleInputChange = (
@@ -73,13 +74,30 @@ export default function NewProductPage() {
         }
     };
 
-    const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const handleImageChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files) return;
-        const files = Array.from(e.target.files);
-        setImages(prev => [...prev, ...files]);
 
-        const previews = files.map(file => URL.createObjectURL(file));
-        setImagePreviews(prev => [...prev, ...previews]);
+        const files = Array.from(e.target.files);
+        const uploadedUrls: string[] = [];
+        const newPreviews: string[] = [];
+
+        // Upload each file
+        for (const file of files) {
+            const result = await uploadImage(file);
+            if (result) {
+                uploadedUrls.push(result.url);
+                newPreviews.push(result.url); // Use Cloudinary URL as preview
+            }
+        }
+
+        // Update state with uploaded URLs
+        setImages(prev => [...prev, ...uploadedUrls]);
+        setImagePreviews(prev => [...prev, ...newPreviews]);
+
+        // Show success toast
+        if (uploadedUrls.length > 0) {
+            toast.success(`Uploaded ${uploadedUrls.length} image${uploadedUrls.length > 1 ? 's' : ''}`);
+        }
     };
 
     const removeImage = (index: number) => {
@@ -105,7 +123,14 @@ export default function NewProductPage() {
         setIsSubmitting(true);
 
         try {
-            // Prepare data for Convex
+            // Validate form first (you already have this)
+            if (!validate()) {
+                toast.error("Please fix the form errors before submitting.");
+                setIsSubmitting(false);
+                return;
+            }
+
+            // Prepare product data
             const productData = {
                 name: formData.name,
                 slug: formData.slug || formData.name.toLowerCase().replace(/\s+/g, '-'),
@@ -117,11 +142,9 @@ export default function NewProductPage() {
                 category: formData.category,
                 subcategory: formData.subcategory || undefined,
                 tags: formData.tags.split(',').map(t => t.trim()).filter(Boolean),
-                // formData.certifications is already an array of strings
                 certifications: formData.certifications,
-                // use uploaded image previews for primary and additional images
-                primaryImage: imagePreviews.length > 0 ? imagePreviews[0] : undefined,
-                additionalImages: imagePreviews.length > 1 ? imagePreviews.slice(1) : [],
+                primaryImage: images.length > 0 ? images[0] : undefined,
+                additionalImages: images.length > 1 ? images.slice(1) : [],
                 specs: {
                     material: formData.specs.material || undefined,
                     size: formData.specs.size || undefined,
@@ -135,15 +158,32 @@ export default function NewProductPage() {
                 supplier: formData.supplier || undefined,
             };
 
-            // Call Convex mutation
-            await createProduct({ product: productData });
+            // Call Firebase addProduct
+            const result = await addProduct(productData);
 
-            toast.success("Product created successfully!");
-            router.push("/admin/products");
+            if (result.success) {
+                toast.success("Product created successfully!");
+                router.push("/admin/products");
+            } else {
+                // Handle known Firebase errors
+                let errorMessage = "Failed to create product. Please try again.";
 
-        } catch (error) {
-            console.error("Create product error:", error);
-            toast.error("Failed to create product. Please check your data.");
+                if (result.message.includes("permission-denied")) {
+                    errorMessage = "You don't have permission to add products.";
+                } else if (result.message.includes("invalid-argument")) {
+                    errorMessage = "Invalid product data. Please check your inputs.";
+                } else if (result.message.includes("network")) {
+                    errorMessage = "Network error. Please check your connection and try again.";
+                }
+
+                toast.error(errorMessage);
+                console.error("Product creation failed:", result.message);
+            }
+
+        } catch (error: any) {
+            // Handle unexpected errors (e.g., network issues, runtime errors)
+            console.error("Unexpected error during product creation:", error);
+            toast.error("An unexpected error occurred. Please try again later.");
         } finally {
             setIsSubmitting(false);
         }
@@ -170,8 +210,9 @@ export default function NewProductPage() {
                         type="submit"
                         form="product-form"
                         className="bg-orange-600 hover:bg-orange-700"
+                        disabled={isSubmitting}
                     >
-                        Save Product
+                        {isSubmitting ? "Saving..." : "Save Product"}
                     </Button>
                 </div>
             </div>
@@ -179,6 +220,58 @@ export default function NewProductPage() {
             <form id="product-form" onSubmit={handleSubmit} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Info */}
                 <div className="lg:col-span-2 space-y-6">
+
+                    {/* Product Images */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 className="font-bold text-gray-900 mb-4">Product Images</h2>
+                        <div
+                            className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
+                            onClick={() => document.getElementById('image-upload')?.click()}
+                        >
+                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
+                            <p className="text-sm font-medium text-gray-700">Click to upload images</p>
+                            <p className="text-xs text-gray-500">JPG, PNG, or WEBP (max 5MB)</p>
+                            <input
+                                id="image-upload"
+                                type="file"
+                                multiple
+                                accept="image/*"
+                                onChange={handleImageChange}
+                                className="hidden"
+                            />
+                        </div>
+
+                        {imagePreviews.length > 0 && (
+                            <div className="mt-4 grid grid-cols-3 gap-3">
+                                {imagePreviews.map((preview, index) => (
+                                    <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
+                                        <img
+                                            src={preview}
+                                            alt={`Preview ${index + 1}`}
+                                            className="w-full h-full object-cover"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => removeImage(index)}
+                                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
+                                        >
+                                            <X className="h-3 w-3" />
+                                        </button>
+                                    </div>
+                                ))}
+
+                                {isUploading && (
+                                    <p className="text-gray-600 text-sm mt-2">Uploading images...</p>
+                                )}
+
+                                {uploadError && (
+                                    <p className="text-red-600 text-sm mt-2">{uploadError}</p>
+                                )}
+                            </div>
+                        )}
+                    </div>
+
+
                     {/* General Information */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 className="font-bold text-gray-900 mb-4">General Information</h2>
@@ -233,6 +326,86 @@ export default function NewProductPage() {
                         </div>
                     </div>
 
+                    {/* Technical Specifications */}
+                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+                        <h2 className="font-bold text-gray-900 mb-4">Technical Specifications</h2>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Material
+                                </label>
+                                <input
+                                    type="text"
+                                    name="specs.material"
+                                    value={formData.specs.material}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                                    placeholder="e.g. HDPE, Nylon"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Size
+                                </label>
+                                <input
+                                    type="text"
+                                    name="specs.size"
+                                    value={formData.specs.size}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                                    placeholder="e.g. Universal, 42"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Color
+                                </label>
+                                <input
+                                    type="text"
+                                    name="specs.color"
+                                    value={formData.specs.color}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                                    placeholder="e.g. Yellow, Blue"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Weight (grams)
+                                </label>
+                                <input
+                                    type="number"
+                                    name="specs.weight"
+                                    value={formData.specs.weight}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                                    placeholder="0"
+                                    min="0"
+                                />
+                            </div>
+
+                            <div className="sm:col-span-2">
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                    Resistance Types (comma separated)
+                                </label>
+                                <input
+                                    type="text"
+                                    name="specs.resistance"
+                                    value={formData.specs.resistance}
+                                    onChange={handleInputChange}
+                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+                                    placeholder="e.g. cut, chemical, impact"
+                                />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* Sidebar */}
+                <div className="space-y-6">
                     {/* Pricing & Inventory */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 className="font-bold text-gray-900 mb-4">Pricing & Inventory</h2>
@@ -329,86 +502,6 @@ export default function NewProductPage() {
                         </div>
                     </div>
 
-                    {/* Technical Specifications */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h2 className="font-bold text-gray-900 mb-4">Technical Specifications</h2>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Material
-                                </label>
-                                <input
-                                    type="text"
-                                    name="specs.material"
-                                    value={formData.specs.material}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                                    placeholder="e.g. HDPE, Nylon"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Size
-                                </label>
-                                <input
-                                    type="text"
-                                    name="specs.size"
-                                    value={formData.specs.size}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                                    placeholder="e.g. Universal, 42"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Color
-                                </label>
-                                <input
-                                    type="text"
-                                    name="specs.color"
-                                    value={formData.specs.color}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                                    placeholder="e.g. Yellow, Blue"
-                                />
-                            </div>
-
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Weight (grams)
-                                </label>
-                                <input
-                                    type="number"
-                                    name="specs.weight"
-                                    value={formData.specs.weight}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                                    placeholder="0"
-                                    min="0"
-                                />
-                            </div>
-
-                            <div className="sm:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Resistance Types (comma separated)
-                                </label>
-                                <input
-                                    type="text"
-                                    name="specs.resistance"
-                                    value={formData.specs.resistance}
-                                    onChange={handleInputChange}
-                                    className="w-full px-3 py-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                                    placeholder="e.g. cut, chemical, impact"
-                                />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Sidebar */}
-                <div className="space-y-6">
                     {/* Organization */}
                     <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
                         <h2 className="font-bold text-gray-900 mb-4">Organization</h2>
@@ -506,47 +599,7 @@ export default function NewProductPage() {
                         </div>
                     </div>
 
-                    {/* Product Images */}
-                    <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
-                        <h2 className="font-bold text-gray-900 mb-4">Product Images</h2>
-                        <div
-                            className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:bg-gray-50 transition-colors cursor-pointer"
-                            onClick={() => document.getElementById('image-upload')?.click()}
-                        >
-                            <Upload className="h-8 w-8 text-gray-400 mx-auto mb-2" />
-                            <p className="text-sm font-medium text-gray-700">Click to upload images</p>
-                            <p className="text-xs text-gray-500">JPG, PNG, or WEBP (max 5MB)</p>
-                            <input
-                                id="image-upload"
-                                type="file"
-                                multiple
-                                accept="image/*"
-                                onChange={handleImageChange}
-                                className="hidden"
-                            />
-                        </div>
 
-                        {imagePreviews.length > 0 && (
-                            <div className="mt-4 grid grid-cols-3 gap-3">
-                                {imagePreviews.map((preview, index) => (
-                                    <div key={index} className="relative aspect-square bg-gray-100 rounded-lg overflow-hidden border border-gray-200">
-                                        <img
-                                            src={preview}
-                                            alt={`Preview ${index + 1}`}
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => removeImage(index)}
-                                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full p-0.5 hover:bg-red-600"
-                                        >
-                                            <X className="h-3 w-3" />
-                                        </button>
-                                    </div>
-                                ))}
-                            </div>
-                        )}
-                    </div>
                 </div>
             </form>
         </div>

@@ -2,11 +2,13 @@
 "use client";
 
 import { createContext, useContext, useState, useEffect } from "react";
+import { useAuthenticationFunctions, auth } from "@/lib/firebase";
+
 
 interface AuthContextType {
   isAuthenticated: boolean;
-  login: (email: string, password: string) => Promise<boolean>;
-  logout: () => void;
+  signin: (email: string, password: string) => Promise<boolean>;
+  signout: () => void;
   loading: boolean;
 }
 
@@ -16,38 +18,56 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  const { login, logout } = useAuthenticationFunctions();
   // Check if already logged in (from localStorage)
   useEffect(() => {
     const stored = localStorage.getItem("marvel-auth");
+    console.log("AUTH >> ", auth);
+
     if (stored === "true") {
       setIsAuthenticated(true);
     }
     setLoading(false);
-  }, []);
+  }, [isAuthenticated]);
 
-  const login = async (email: string, password: string): Promise<boolean> => {
-    // Get demo credentials from env
-    const demoEmail = process.env.NEXT_PUBLIC_DEMO_EMAIL;
-    const demoPassword = process.env.NEXT_PUBLIC_DEMO_PASSWORD;
+  const signin = async (email: string, password: string): Promise<boolean> => {
 
-    if (email === demoEmail && password === demoPassword) {
-      setIsAuthenticated(true);
-      localStorage.setItem("marvel-auth", "true");
+    try {
+      // Call the login function from Firebase
+      const result = await login(email, password);
+      if (!result) {
+        return false;
+      } else if (result?.success) {
+        // log("Login successful for user:", result.loggedInUser?.email);
+        console.log("Login successful for user:", result.loggedInUser?.email);
+        setIsAuthenticated(true);
+        localStorage.setItem("marvel-auth", "true");
+      }
       return true;
+    } catch (error) {
+      // log("Login failed with error:", error);
+      console.error("Login failed with error:", error);
     }
+
 
     return false;
   };
 
-  const logout = () => {
-    setIsAuthenticated(false);
-    localStorage.removeItem("marvel-auth");
+  const signout = () => {
+    try {
+      logout();
+      setIsAuthenticated(false);
+      localStorage.removeItem("marvel-auth");
+      console.log("User logged out successfully");
+    } catch (error) {
+      console.error("Logout failed with error:", error);
+    }
   };
 
 
 
   return (
-    <AuthContext.Provider value={{ isAuthenticated, login, logout, loading }}>
+    <AuthContext.Provider value={{ isAuthenticated, signin, signout, loading }}>
       {children}
     </AuthContext.Provider>
   );

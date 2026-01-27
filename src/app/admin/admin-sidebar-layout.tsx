@@ -25,7 +25,7 @@ export default function AdminSidebarLayout({
     const [sidebarOpen, setSidebarOpen] = useState(false);
     const [, startTransition] = useTransition();
     const pathname = usePathname();
-    const { logout } = useAuth();
+    const { signout } = useAuth();
     const router = useRouter();
 
 
@@ -37,7 +37,7 @@ export default function AdminSidebarLayout({
     }, [pathname]);
 
     const handleLogout = () => {
-        logout();
+        signout();
         toast.success("Logged out successfully");
         console.log("logging out and redirecting to /products");
 

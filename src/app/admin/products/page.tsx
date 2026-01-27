@@ -109,7 +109,8 @@ export default function AdminProductsPage() {
         const fetchProducts = async () => {
             setLoading(true);
             // Simulate API delay
-            await new Promise(resolve => setTimeout(resolve, 800));
+            await
+                await new Promise(resolve => setTimeout(resolve, 800));
             setProducts(MOCK_PRODUCTS);
             setLoading(false);
         };

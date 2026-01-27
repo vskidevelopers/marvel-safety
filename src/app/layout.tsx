@@ -6,7 +6,7 @@ import { Toaster } from "sonner";
 import "./globals.css";
 import { Footer } from "@/components/ui/Footer";
 import { CartProvider } from "./context/cart-context";
-// import { ClerkProvider } from "@clerk/nextjs";
+
 
 export default async function RootLayout({
   children,

@@ -1,134 +1,109 @@
-// context/cart-context.tsx
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo } from "react";
-import { Cart, CartItem, MOCK_CART } from "@/app/types/cart";
+import { createContext, useContext, useEffect, useState } from "react";
+
+// ✅ Complete CartItem interface matching Firestore structure
+export interface CartItem {
+    id: string;
+    name: string;
+    price: number;
+    quantity: number;
+    image: string;
+    sku: string;
+    slug: string;
+    certifications: string[];
+    specs: {
+        color?: string;
+        size?: string;
+        material?: string;
+    };
+}
 
 interface CartContextType {
-    cart: Cart;
-    totalPrice: number;
-    addToCart: (item: CartItem) => void;
-    removeFromCart: (id: string) => void;
+    items: CartItem[];
+    addItem: (item: Omit<CartItem, "quantity">) => void;
     updateQuantity: (id: string, quantity: number) => void;
+    removeFromCart: (id: string) => void;
     clearCart: () => void;
+    totalItems: number;
+    totalPrice: number;
 }
 
 const CartContext = createContext<CartContextType | undefined>(undefined);
 
-function getInitialCart(): Cart {
-    if (typeof window === "undefined") return MOCK_CART;
-
-    try {
-        const saved = localStorage.getItem("marvel-cart");
-        return saved ? JSON.parse(saved) : MOCK_CART;
-    } catch (e) {
-        console.error("Failed to parse cart, using default", e);
-        return MOCK_CART;
-    }
-}
-
 export function CartProvider({ children }: { children: React.ReactNode }) {
-    const [cart, setCart] = useState<Cart>(getInitialCart);
-
-    // Persist to localStorage
-    useEffect(() => {
+    const [items, setItems] = useState<CartItem[]>(() => {
         if (typeof window !== "undefined") {
-            localStorage.setItem("marvel-cart", JSON.stringify(cart));
+            const saved = localStorage.getItem("marvel-cart");
+            try {
+                const parsed = JSON.parse(saved || '[]');
+                // ✅ Ensure it's an array
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return []; // fallback on parse error
+            }
         }
-    }, [cart]);
+        return [];
+    });
 
-    // Calculate total price
-    const totalPrice = useMemo(
-        () => cart.items.reduce((sum, item) => sum + item.subtotal, 0),
-        [cart.items]
-    );
+    useEffect(() => {
+        localStorage.setItem("marvel-cart", JSON.stringify(items));
+    }, [items]);
 
-    const addToCart = (newItem: CartItem) => {
-        setCart(prev => {
-            console.log("Adding to cart:", newItem);
-            console.log("Prev items >>> ", prev);
-            const existingIndex = prev.items.findIndex(item => item.id === newItem.id);
-            console.log("Existing item index:", existingIndex);
+    const addItem = (item: Omit<CartItem, "quantity">) => {
+        setItems(prev => {
+            const existing = prev.find(i => i.id === item.id);
 
-            if (existingIndex !== -1) {
-                const updatedItems = [...prev.items];
-                const existing = updatedItems[existingIndex];
-                const newQuantity = existing.quantity + newItem.quantity;
-                const newSubtotal = newQuantity * existing.price;
-
-                console.log("Item already exists. Updating quantity from", existing.quantity, "to", newQuantity);
-
-                updatedItems[existingIndex] = {
-                    ...existing,
-                    quantity: newQuantity,
-                    subtotal: newSubtotal,
-                };
-                console.log("Updated item:", updatedItems[existingIndex]);
-                return { ...prev, items: updatedItems };
+            if (existing) {
+                return prev.map(i =>
+                    i.id === item.id
+                        ? { ...i, quantity: i.quantity + 1 }
+                        : i
+                );
+            } else {
+                return [...prev, { ...item, quantity: 1 }];
             }
-
-            console.log("New item added to cart. Total items:", prev.items.length + 1);
-            return { ...prev, items: [...prev.items, newItem] };
-        });
-    };
-
-    const removeFromCart = (id: string) => {
-        setCart(prev => {
-            const updatedItems = prev.items.filter(item => item.id !== id);
-            console.log("Removing item with id:", id);
-            console.log("Remaining items:", updatedItems.length);
-
-            if (updatedItems.length === 0) {
-                console.log("Cart is empty, clearing cart and localStorage");
-                localStorage.removeItem("marvel-cart");
-                clearCart();
-                return prev;
-            }
-
-            return { ...prev, items: updatedItems };
         });
     };
 
     const updateQuantity = (id: string, quantity: number) => {
-        console.log("Updating quantity for item id:", id, "to:", quantity);
-
         if (quantity < 1) {
-            console.log("Quantity is less than 1, removing item from cart");
             removeFromCart(id);
             return;
         }
 
-        setCart(prev => {
-            const updatedItems = prev.items.map(item =>
-                item.id === id
-                    ? { ...item, quantity, subtotal: quantity * item.price }
-                    : item
-            );
-            const updatedItem = updatedItems.find(item => item.id === id);
-            console.log("Item quantity updated:", updatedItem);
-            return { ...prev, items: updatedItems };
-        });
+        setItems(prev =>
+            prev.map(item =>
+                item.id === id ? { ...item, quantity } : item
+            )
+        );
+    };
+
+    const removeFromCart = (id: string) => {
+        setItems(prev => prev.filter(item => item.id !== id));
     };
 
     const clearCart = () => {
-        setCart({
-            id: `cart-${Date.now()}`,
-            items: [],
-            totalPrice: 0,
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-        });
+        setItems([]);
     };
+    const totalItems = Array.isArray(items)
+        ? items.reduce((sum, item) => sum + (item?.quantity || 0), 0)
+        : 0;
+
+    const totalPrice = Array.isArray(items)
+        ? items.reduce((sum, item) => sum + ((item?.price || 0) * (item?.quantity || 0)), 0)
+        : 0;
 
     return (
         <CartContext.Provider
             value={{
-                cart,
-                totalPrice,
-                addToCart,
-                removeFromCart,
+                items,
+                addItem,
                 updateQuantity,
+                removeFromCart,
                 clearCart,
+                totalItems,
+                totalPrice,
             }}
         >
             {children}
