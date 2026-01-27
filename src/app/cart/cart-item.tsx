@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useCart } from "../context/cart-context";
-import { CartItem } from "@/types/cart-item";
+import { CartItem } from "../types/cart";
 
 export function CartItemComponent({ item }: { item: CartItem }) {
     const { updateQuantity, removeFromCart } = useCart();

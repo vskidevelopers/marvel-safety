@@ -29,3 +29,10 @@ export interface OrderData {
   status: "pending";
   // createdAt handled by Firestore
 }
+
+// ✅ Result type for order operations
+export interface OrderResult {
+  success: boolean;
+  orderId?: string;
+  error?: string;
+}
