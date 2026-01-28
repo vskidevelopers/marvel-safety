@@ -1,23 +1,9 @@
 "use client";
 
 import { createContext, useContext, useEffect, useState } from "react";
+import { CartItem } from "../types/cart";
 
 // ✅ Complete CartItem interface matching Firestore structure
-export interface CartItem {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    image: string;
-    sku: string;
-    slug: string;
-    certifications: string[];
-    specs: {
-        color?: string;
-        size?: string;
-        material?: string;
-    };
-}
 
 interface CartContextType {
     items: CartItem[];

@@ -8,41 +8,7 @@ import {
 } from "lucide-react";
 import { useCart } from "@/app/context/cart-context";
 import { useOrderFunctions } from "@/lib/hooks/useOrderFunctions";
-
-interface OrderItem {
-    id: string;
-    name: string;
-    price: number;
-    quantity: number;
-    image: string;
-    sku: string;
-}
-
-interface OrderData {
-    id: string;
-    customer: {
-        fullName: string;
-        phone: string;
-        location: string;
-        city: string;
-    };
-    payment: {
-        method: "mpesa" | "cod";
-        mpesaCode?: string;
-    };
-    items: OrderItem[];
-    totals: {
-        subtotal: number;
-        vat: number;
-        delivery: number;
-        grandTotal: number;
-    };
-    status: string;
-    createdAt: {
-        seconds: number;
-        nanoseconds: number;
-    };
-}
+import { OrderData } from "@/app/types/order";
 
 export default function OrderConfirmationPage({
     params
@@ -79,7 +45,8 @@ export default function OrderConfirmationPage({
 
             try {
                 const result = await fetchOrderById(orderId);
-                if (result.success && result.data) {
+                console.log("🔍 Fetch order result:", result);
+                if (result?.success && result.data) {
                     setOrder(result.data);
                     // ✅ Update localStorage with valid ID
                     localStorage.setItem("marvel-last-order-id", orderId);
@@ -96,15 +63,15 @@ export default function OrderConfirmationPage({
 
         loadOrder();
         clearCart(); // Clear cart only once
-    }, []); // ✅ Empty dependency array - runs once
+    }, []);
 
-    // ... rest of your component (loading/error states + UI)
+
     if (loading) {
         return (
             <div className="min-h-screen bg-gray-50 py-6 px-4 flex items-center justify-center">
                 <div className="text-center">
                     <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-600 mx-auto mb-4"></div>
-                    <p className="text-gray-600">Loading your order...</p>
+                    <p className="text-gray-600">Loading your order?...</p>
                 </div>
             </div>
         );
@@ -133,7 +100,12 @@ export default function OrderConfirmationPage({
     }
 
     const formatDate = () => {
-        const date = new Date(order.createdAt.seconds * 1000);
+        // ✅ Handle undefined createdAt
+        if (!order?.createdAt?.seconds) {
+            return { date: "N/A", time: "N/A" };
+        }
+
+        const date = new Date(order?.createdAt.seconds * 1000);
         return {
             date: date.toLocaleDateString('en-US', {
                 day: 'numeric',
@@ -147,7 +119,6 @@ export default function OrderConfirmationPage({
             })
         };
     };
-
     const { date, time } = formatDate();
 
     return (
@@ -159,9 +130,11 @@ export default function OrderConfirmationPage({
                         <div>
                             <h1 className="text-xl font-bold text-gray-900">Order Confirmed!</h1>
                             <p className="text-gray-600 mt-1 text-sm">
-                                {order.payment.method === "cod"
+                                {order?.payment?.method === "cod"
                                     ? "Pay cash to the delivery agent upon receipt"
-                                    : "Payment received via M-Pesa"}
+                                    : order?.payment?.method === "mpesa"
+                                        ? "Payment received via M-Pesa"
+                                        : "Payment details unavailable"}
                             </p>
                         </div>
                     </div>
@@ -190,7 +163,7 @@ export default function OrderConfirmationPage({
                                     <p className="text-gray-500 text-xs uppercase tracking-wider">
                                         Order Number
                                     </p>
-                                    <p className="text-lg font-bold text-gray-900">{order.id}</p>
+                                    <p className="text-lg font-bold text-gray-900">{order?.id}</p>
                                 </div>
                                 <div className="text-right">
                                     <p className="text-gray-500 text-xs uppercase tracking-wider">
@@ -201,30 +174,29 @@ export default function OrderConfirmationPage({
                                 </div>
                             </div>
                         </div>
-
                         <div
-                            className={`p-4 ${order.payment.method === "cod"
+                            className={`p-4 ${order?.payment?.method === "cod" // ✅ Add ? after payment
                                 ? "bg-emerald-50 border-b border-emerald-200"
                                 : "bg-orange-50 border-b border-orange-200"
                                 }`}
                         >
                             <div className="flex items-center gap-2">
                                 <div
-                                    className={`flex items-center justify-center h-6 w-6 rounded-full ${order.payment.method === "cod"
+                                    className={`flex items-center justify-center h-6 w-6 rounded-full ${order?.payment?.method === "cod"
                                         ? "bg-emerald-500"
                                         : "bg-orange-500"
                                         } text-white text-xs font-bold`}
                                 >
-                                    {order.payment.method === "cod" ? "✓" : "M"}
+                                    {order?.payment?.method === "cod" ? "✓" : "M"}
                                 </div>
                                 <div>
                                     <p className="text-sm font-semibold text-gray-900">
-                                        {order.payment.method === "cod"
+                                        {order?.payment?.method === "cod"
                                             ? "Pay on Delivery"
                                             : "M-Pesa Payment"}
                                     </p>
                                     <p className="text-xs text-gray-600">
-                                        {order.payment.method === "cod"
+                                        {order?.payment?.method === "cod"
                                             ? "Pay cash when delivered"
                                             : "Confirmation received"}
                                     </p>
@@ -237,10 +209,10 @@ export default function OrderConfirmationPage({
                                 Delivery Address
                             </h3>
                             <div className="text-sm text-gray-700 space-y-1">
-                                <p className="font-semibold">{order.customer.fullName}</p>
-                                <p>{order.customer.phone}</p>
-                                <p>{order.customer.location}</p>
-                                <p className="font-semibold">{order.customer.city}</p>
+                                <p className="font-semibold">{order?.customer?.fullName}</p>
+                                <p>{order?.customer?.phone}</p>
+                                <p>{order?.customer?.location}</p>
+                                <p className="font-semibold">{order?.customer?.city}</p>
                             </div>
                         </div>
 
@@ -260,7 +232,7 @@ export default function OrderConfirmationPage({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {order.items.map((item, idx) => (
+                                    {order?.items?.map((item, idx) => (
                                         <tr key={idx} className="border-b border-gray-200">
                                             <td className="py-3">
                                                 <p className="text-gray-900 text-sm">{item.name}</p>
@@ -284,19 +256,19 @@ export default function OrderConfirmationPage({
                             <div className="space-y-2 text-sm">
                                 <div className="flex justify-between text-gray-600">
                                     <span>Subtotal</span>
-                                    <span>KES {order.totals.subtotal.toLocaleString()}</span>
+                                    <span>KES {order?.totals?.subtotal?.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-600">
                                     <span>Delivery Fee</span>
-                                    <span>KES {order.totals.delivery.toLocaleString()}</span>
+                                    <span>KES {order?.totals?.delivery?.toLocaleString()}</span>
                                 </div>
                                 <div className="flex justify-between text-gray-600">
                                     <span>VAT (16%)</span>
-                                    <span>KES {order.totals.vat.toFixed(2)}</span>
+                                    <span>KES {order?.totals?.vat?.toFixed(2)}</span>
                                 </div>
                                 <div className="border-t pt-2 flex justify-between font-bold text-lg text-gray-900">
                                     <span>Total</span>
-                                    <span>KES {order.totals.grandTotal.toLocaleString()}</span>
+                                    <span>KES {order?.totals?.grandTotal?.toLocaleString()}</span>
                                 </div>
                             </div>
                         </div>

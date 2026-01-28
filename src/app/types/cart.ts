@@ -7,8 +7,8 @@ export interface CartItem {
   price: number;
   oldPrice?: number;
   quantity: number;
-  subtotal: number;
-  category: string;
+  subtotal: number; // ← Required (not optional)
+  category: string; // ← Required
   certifications: string[];
   specs: {
     material?: string;
@@ -16,8 +16,8 @@ export interface CartItem {
     color?: string;
   };
   image: string;
-  inStock: boolean;
-  stockCount: number;
+  inStock: boolean; // ← Required
+  stockCount: number; // ← Required
 }
 
 export interface Cart {

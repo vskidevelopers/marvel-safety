@@ -395,6 +395,11 @@ export async function fetchOrderFromFirestore(orderId) {
         JSON.stringify(orderDoc.data(), null, 2),
       );
 
+      console.log("return data for order >> ", {
+        success: true,
+        data: { id: orderDoc.id, ...orderDoc.data() },
+      });
+
       return {
         success: true,
         data: { id: orderDoc.id, ...orderDoc.data() },

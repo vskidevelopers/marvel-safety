@@ -43,6 +43,14 @@ export function CartItemComponent({ item }: { item: CartItem }) {
                     {item.specs?.material && <span>• {item.specs.material}</span>}
                 </div>
 
+
+                {/* ✅ Safe access with optional chaining */}
+                {item.category && <span>Category: {item.category}</span>}
+                {item.inStock !== undefined && (
+                    <span>{item.inStock ? 'In Stock' : 'Out of Stock'}</span>
+                )}
+
+
                 {/* Certifications - Safe access */}
                 <div className="flex flex-wrap gap-1 mt-2">
                     {(item.certifications || []).map(cert => (

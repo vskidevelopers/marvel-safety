@@ -6,12 +6,14 @@ import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/cart-context";
 import { useProductFunctions } from "@/lib/firebase";
 import { toast } from "sonner";
+import { CartItem } from "../types/cart";
 
 // ✅ Simplified product interface (only essential fields)
 interface Product {
     id: string;
     name: string;
     description: string;
+    slug: string;
     price: number;
     oldPrice?: number;
     inStock: boolean;
@@ -118,6 +120,7 @@ export function ProductDetail({ productId }: ProductDetailProps) {
         return categories[categoryId] || categoryId;
     };
 
+
     // ✅ Add to cart handler
     const handleAddToCart = () => {
         if (!product.inStock) {
@@ -125,13 +128,20 @@ export function ProductDetail({ productId }: ProductDetailProps) {
             return;
         }
 
-        // Create minimal cart item
-        const cartItem = {
+        const cartItem: CartItem = {
             id: product.id,
             name: product.name,
-            price: product.price,
-            image: selectedImage,
+            slug: product.slug,
             sku: product.sku,
+            price: product.price,
+            quantity: 1,
+            image: product.primaryImage,
+            category: product.category,
+            certifications: product.certifications,
+            specs: product.specs,
+            inStock: product.inStock,
+            stockCount: product.stockCount || 0,
+            subtotal: product.price,
         };
 
         addItem(cartItem);

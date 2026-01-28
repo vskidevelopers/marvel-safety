@@ -1,8 +1,8 @@
 import { addOrderToFirestore, fetchOrderFromFirestore } from "@/lib/firebase";
-import type { OrderData } from "@/app/types/order";
+import type { CreateOrderData } from "@/app/types/order";
 
 export const useOrderFunctions = () => {
-  const addOrder = async (data: Omit<OrderData, "status">) => {
+  const addOrder = async (data: Omit<CreateOrderData, "status">) => {
     console.log("🛒 [Hook] addOrder called");
     console.log("🛒 [Hook] Order data:", data);
 

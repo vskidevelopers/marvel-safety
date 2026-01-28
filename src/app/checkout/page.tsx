@@ -6,8 +6,7 @@ import { ShieldCheck, Smartphone, Truck, MapPin } from "lucide-react";
 import { toast } from "sonner";
 import { useCart } from "../context/cart-context";
 import { useOrderFunctions } from "@/lib/hooks/useOrderFunctions";
-import type { OrderData } from "../types/order";
-
+import type { CreateOrderData } from "../types/order";
 export default function CheckoutPage() {
     const { items, totalPrice, clearCart } = useCart();
     const { addOrder } = useOrderFunctions();
@@ -60,7 +59,7 @@ export default function CheckoutPage() {
             }
 
             // Prepare order data with proper typing
-            const orderData: Omit<OrderData, "status"> = {
+            const orderData: Omit<CreateOrderData, "status"> = {
                 customer: { fullName, phone, location, city },
                 payment: { method: paymentMethod, mpesaCode },
                 items: items.map(item => ({
@@ -70,6 +69,14 @@ export default function CheckoutPage() {
                     quantity: item.quantity,
                     image: item.image,
                     sku: item.sku,
+
+                    // ✅ Add missing required fields with defaults
+                    slug: item.slug || item.name.toLowerCase().replace(/\s+/g, '-'),
+                    category: item.category || 'general',
+                    certifications: item.certifications || ['KEBS'],
+                    specs: item.specs || {},
+                    inStock: item.inStock !== undefined ? item.inStock : true,
+                    stockCount: item.stockCount || 0,
                 })),
                 totals: { subtotal, vat, delivery, grandTotal },
             };
