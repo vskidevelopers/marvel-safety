@@ -11,6 +11,7 @@ import {
     FileText,
     LogOut,
     Menu,
+    ClipboardList,
     X
 } from "lucide-react";
 import { useAuth } from "../context/auth-context";
@@ -48,6 +49,7 @@ export default function AdminSidebarLayout({
         { name: "Dashboard", href: "/admin/dashboard", icon: LayoutDashboard },
         { name: "Products", href: "/admin/products", icon: Package },
         { name: "Orders", href: "/admin/orders", icon: ShoppingBag },
+        { name: "Quotes", href: "/admin/quotes", icon: ClipboardList },
         { name: "Reports", href: "/admin/reports", icon: FileText },
     ];
 

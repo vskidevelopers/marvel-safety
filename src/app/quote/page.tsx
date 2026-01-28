@@ -6,8 +6,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "sonner";
+import { submitQuoteToFirestore } from "@/lib/firebase";
+import { useRouter } from "next/navigation";
 
 export default function QuoteRequestPage() {
+    const router = useRouter();
     const [formData, setFormData] = useState({
         companyName: "",
         contactPerson: "",
@@ -27,42 +30,59 @@ export default function QuoteRequestPage() {
     ) => {
         const { name, value } = e.target;
         setFormData(prev => ({ ...prev, [name]: value }));
+
+        // ✅ Log field changes for debugging
+        console.log("📝 [Quote Form] Field updated:", { name, value });
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setIsSubmitting(true);
 
+        console.log("📤 [Quote Form] Submitting quote request...");
+        console.log("📤 [Quote Form] Form data:", formData);
+
         try {
-            // TODO: Replace with Convex mutation
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
+            const result = await submitQuoteToFirestore(formData);
 
-            toast.success("Quote request submitted!", {
-                description: "We'll contact you within 24 hours.",
-            });
+            if (result.success) {
+                console.log("✅ [Quote Form] Quote submitted successfully!");
+                console.log("✅ [Quote Form] Quote ID:", result.quoteId);
 
-            // Reset form
-            setFormData({
-                companyName: "",
-                contactPerson: "",
-                email: "",
-                phone: "",
-                location: "",
-                items: "",
-                estimatedQuantity: "",
-                deliveryDate: "",
-                notes: "",
-            });
+                toast.success("Quote request submitted!", {
+                    description: "We'll contact you within 24 hours.",
+                });
 
-        } catch (error) {
+                setFormData({
+                    companyName: "",
+                    contactPerson: "",
+                    email: "",
+                    phone: "",
+                    location: "",
+                    items: "",
+                    estimatedQuantity: "",
+                    deliveryDate: "",
+                    notes: "",
+                });
+                // ✅ Redirect to thank you page after 2 seconds
+                setTimeout(() => {
+                    router.push("/quote/thank-you");
+                }, 2000);
+            } else {
+                console.error("❌ [Quote Form] Quote submission failed:", result.error);
+                throw new Error(result.error || "Failed to submit quote");
+            }
+
+        } catch (error: any) {
+            console.error("💥 [Quote Form] Unexpected error:", error);
             toast.error("Failed to submit request", {
-                description: "Please try again or call us directly.",
+                description: error.message || "Please try again or call us directly.",
             });
         } finally {
+            console.log("⏹️ [Quote Form] Submission process completed");
             setIsSubmitting(false);
         }
     };
-
     return (
         <div className="container mx-auto px-4 py-8 max-w-3xl">
             <div className="text-center mb-8">

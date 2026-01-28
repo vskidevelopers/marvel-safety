@@ -1,36 +1,51 @@
 import { useState, useEffect } from "react";
-import { useProductFunctions } from "@/lib/firebase";
+import {
+  fetchAllProducts,
+  fetchProductById,
+  createProduct,
+  updateProduct,
+  deleteProduct,
+  fetchProductsByCategory,
+  fetchProductsByAttribute,
+} from "@/lib/firebase";
+
+// Reuse your Product interface
+import type { Product } from "@/app/types/product";
 
 export function useProducts() {
-  const [products, setProducts] = useState<any[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { fetchAllProducts } = useProductFunctions();
+  // Fetch all products
+  const loadProducts = async () => {
+    setLoading(true);
+    setError(null);
+    const result = await fetchAllProducts();
+    if (result.success) {
+      setProducts(result.data || []);
+    } else {
+      setError(result.error || "Failed to load products");
+    }
+    setLoading(false);
+  };
 
+  // Initial load
   useEffect(() => {
-    const loadProducts = async () => {
-      setLoading(true);
-      setError(null);
-
-      try {
-        const result = await fetchAllProducts();
-        if (result.success) {
-          setProducts(result.data || []);
-        } else {
-          setError("Failed to load products");
-          console.error("Fetch products error:", result.message);
-        }
-      } catch (err) {
-        setError("Network error");
-        console.error("Unexpected fetch error:", err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     loadProducts();
   }, []);
 
-  return { products, loading, error, refetch: () => {} }; // Add refetch later if needed
+  return {
+    products,
+    loading,
+    error,
+    refetch: loadProducts,
+
+    createProduct,
+    updateProduct,
+    deleteProduct,
+    fetchProductById,
+    fetchProductsByCategory,
+    fetchProductsByAttribute,
+  };
 }

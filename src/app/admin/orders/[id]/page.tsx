@@ -19,122 +19,126 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { toast } from "sonner";
-
-// Mock order data (replace with Convex query)
-const MOCK_ORDER = {
-    id: "MVL-20251210-00152",
-    customer: "Nairobi Construction Ltd",
-    email: "procurement@nairobi-construction.co.ke",
-    phone: "+254712345678",
-    location: "Plot 456, Enterprise Road, Industrial Area",
-    city: "Nairobi",
-    date: "10 Dec 2024",
-    time: "14:32 EAT",
-    paymentMethod: "cod",
-    mpesaCode: null,
-    status: "confirmed",
-    items: [
-        {
-            id: "1",
-            name: "EN397 Yellow Hard Hat",
-            sku: "MS-HF-HH-01",
-            quantity: 50,
-            price: 850,
-            total: 42500,
-            certifications: ["KEBS", "EN397"]
-        },
-        {
-            id: "2",
-            name: "NP 306 Masks (Box of 50)",
-            sku: "MS-RES-NP306-50",
-            quantity: 20,
-            price: 3500,
-            total: 70000,
-            certifications: ["KEBS", "EN149"]
-        },
-        {
-            id: "3",
-            name: "Class 2 Reflective Vest",
-            sku: "MS-HV-VST-01",
-            quantity: 100,
-            price: 450,
-            total: 45000,
-            certifications: ["KEBS"]
-        }
-    ],
-    subtotal: 157500,
-    delivery: 2000,
-    vat: 25600,
-    total: 185100,
-    notes: "Urgent delivery required for construction site safety audit",
-    createdAt: "2024-12-10T14:32:00Z",
-    updatedAt: "2024-12-10T14:32:00Z"
-};
+import { fetchOrderFromFirestore, updateOrderStatus } from "@/lib/firebase";
+import type { OrderData } from "@/app/types/order";
 
 const STATUS_STEPS = [
-    { id: "confirmed", label: "Order Confirmed", icon: AlertCircle, time: "Today, 14:32" },
-    { id: "processing", label: "Processing", icon: Package, time: "Today" },
-    { id: "shipped", label: "Shipped", icon: Truck, time: "Tomorrow" },
-    { id: "delivered", label: "Delivered", icon: CheckCircle, time: "2-3 days" }
+    { id: "pending", label: "Order Placed", icon: AlertCircle, time: "Order received" },
+    { id: "confirmed", label: "Confirmed", icon: AlertCircle, time: "Payment confirmed" },
+    { id: "processing", label: "Processing", icon: Package, time: "Preparing shipment" },
+    { id: "shipped", label: "Shipped", icon: Truck, time: "Out for delivery" },
+    { id: "delivered", label: "Delivered", icon: CheckCircle, time: "Delivered to customer" }
 ];
 
 export default function OrderDetailPage() {
     const router = useRouter();
     const params = useParams();
-    const [order, setOrder] = useState<any>(null);
+    const orderId = params?.id as string;
+
+    const [order, setOrder] = useState<OrderData | null>(null);
     const [loading, setLoading] = useState(true);
     const [selectedStatus, setSelectedStatus] = useState("");
 
-    // Load order data
+    // Load order data from Firebase
     useEffect(() => {
         const loadOrder = async () => {
-            setLoading(true);
-            // Simulate API fetch
-            await new Promise(resolve => setTimeout(resolve, 600));
-            setOrder(MOCK_ORDER);
-            setSelectedStatus(MOCK_ORDER.status);
-            setLoading(false);
+            if (!orderId) {
+                toast.error("Invalid order ID");
+                router.push("/admin/orders");
+                return;
+            }
+
+            try {
+                setLoading(true);
+                const result = await fetchOrderFromFirestore(orderId);
+
+                if (result.success && result.data) {
+                    setOrder(result.data);
+                    setSelectedStatus(result?.data?.status || "pending");
+                } else {
+                    toast.error("Order not found");
+                    router.push("/admin/orders");
+                }
+            } catch (error) {
+                console.error("❌ [Order Detail] Load error:", error);
+                toast.error("Failed to load order");
+                router.push("/admin/orders");
+            } finally {
+                setLoading(false);
+            }
         };
 
         loadOrder();
-    }, [params.id]);
+    }, [orderId, router]);
 
     const handleStatusUpdate = async () => {
-        if (!order) return;
+        if (!order || selectedStatus === order.status) return;
 
         try {
-            // TODO: Replace with Convex mutation
-            await new Promise(resolve => setTimeout(resolve, 500));
-            setOrder({ ...order, status: selectedStatus });
-            toast.success("Order status updated successfully");
-        } catch (error) {
-            toast.error("Failed to update status");
-            console.error(error);
+            const result = await updateOrderStatus(orderId, selectedStatus);
+
+            if (result.success) {
+                setOrder({ ...order, status: selectedStatus });
+                toast.success("Order status updated successfully");
+            } else {
+                throw new Error(result.error || "Failed to update status");
+            }
+        } catch (error: any) {
+            console.error("❌ [Order Detail] Update error:", error);
+            toast.error("Failed to update status", {
+                description: error.message || "Please try again"
+            });
         }
     };
 
     const getStatusColor = (status: string) => {
-        switch (status) {
+        // Handle undefined/null by defaulting to "pending"
+        const safeStatus = status || "pending";
+
+        switch (safeStatus) {
             case "delivered": return "bg-green-100 text-green-800";
             case "shipped": return "bg-blue-100 text-blue-800";
             case "processing": return "bg-yellow-100 text-yellow-800";
-            default: return "bg-orange-100 text-orange-800";
+            case "confirmed": return "bg-orange-100 text-orange-800";
+            default: return "bg-gray-100 text-gray-600";
         }
     };
 
     const getStatusText = (status: string) => {
-        switch (status) {
+        // Handle undefined/null by defaulting to "pending"
+        const safeStatus = status || "pending";
+
+        switch (safeStatus) {
+            case "pending": return "Pending";
             case "confirmed": return "Confirmed";
             case "processing": return "Processing";
             case "shipped": return "Shipped";
             case "delivered": return "Delivered";
-            default: return status;
+            default: return safeStatus;
         }
+    };
+
+    const formatDate = (timestamp: any): string => {
+        if (!timestamp?.seconds) return "N/A";
+        return new Date(timestamp.seconds * 1000).toLocaleDateString('en-US', {
+            day: 'numeric',
+            month: 'short',
+            year: 'numeric'
+        });
+    };
+
+    const formatTime = (timestamp: any): string => {
+        if (!timestamp?.seconds) return "N/A";
+        return new Date(timestamp.seconds * 1000).toLocaleTimeString('en-US', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZoneName: 'short'
+        });
     };
 
     const downloadReceipt = () => {
         toast.info("Receipt download coming soon");
-        // TODO: Implement PDF generation with pdf-lib
+        // TODO: Implement PDF generation
     };
 
     if (loading) {
@@ -216,8 +220,8 @@ export default function OrderDetailPage() {
                     </div>
                     <div className="mt-1 flex items-center gap-2">
                         <span className="font-mono text-gray-900">{order.id}</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getStatusColor(order.status)}`}>
-                            {getStatusText(order.status)}
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${getStatusColor(order?.status || "pending")}`}>
+                            {getStatusText(order?.status || "pending")}
                         </span>
                     </div>
                 </div>
@@ -256,24 +260,26 @@ export default function OrderDetailPage() {
                         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <p className="text-sm text-gray-500 mb-1">Customer Name</p>
-                                <p className="font-medium text-gray-900">{order.customer}</p>
-                            </div>
-                            <div>
-                                <p className="text-sm text-gray-500 mb-1">Email</p>
-                                <p className="font-medium text-gray-900">{order.email}</p>
+                                <p className="font-medium text-gray-900">{order.customer?.fullName || "N/A"}</p>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500 mb-1">Phone</p>
                                 <p className="font-medium text-gray-900 flex items-center gap-1">
                                     <Phone className="h-4 w-4 text-gray-500" />
-                                    {order.phone}
+                                    {order.customer?.phone || "N/A"}
                                 </p>
                             </div>
                             <div>
                                 <p className="text-sm text-gray-500 mb-1">Order Date</p>
                                 <p className="font-medium text-gray-900 flex items-center gap-1">
                                     <Calendar className="h-4 w-4 text-gray-500" />
-                                    {order.date} at {order.time}
+                                    {formatDate(order.createdAt)} at {formatTime(order.createdAt)}
+                                </p>
+                            </div>
+                            <div>
+                                <p className="text-sm text-gray-500 mb-1">Payment Method</p>
+                                <p className="font-medium text-gray-900">
+                                    {order.payment?.method === "cod" ? "Cash on Delivery" : "M-Pesa"}
                                 </p>
                             </div>
                         </div>
@@ -281,17 +287,10 @@ export default function OrderDetailPage() {
                         <div className="mt-4 pt-4 border-t border-gray-200">
                             <p className="text-sm text-gray-500 mb-1">Delivery Address</p>
                             <p className="font-medium text-gray-900">
-                                {order.location}<br />
-                                {order.city}
+                                {order.customer?.location || "N/A"}<br />
+                                {order.customer?.city || "N/A"}
                             </p>
                         </div>
-
-                        {order.notes && (
-                            <div className="mt-4 pt-4 border-t border-gray-200">
-                                <p className="text-sm text-gray-500 mb-1">Order Notes</p>
-                                <p className="text-gray-700">{order.notes}</p>
-                            </div>
-                        )}
                     </div>
 
                     {/* Order Items */}
@@ -299,14 +298,14 @@ export default function OrderDetailPage() {
                         <h2 className="font-bold text-gray-900 mb-4">Order Items</h2>
 
                         <div className="space-y-4">
-                            {order.items.map((item: any, index: number) => (
+                            {order.items?.map((item, index) => (
                                 <div key={index} className="flex gap-4 pb-4 last:pb-0 last:border-0 border-b border-gray-200">
                                     <div className="flex-1 min-w-0">
                                         <p className="font-medium text-gray-900 text-sm">{item.name}</p>
                                         <p className="text-xs text-gray-500 mt-0.5">SKU: {item.sku}</p>
 
                                         <div className="flex flex-wrap gap-1 mt-2">
-                                            {item.certifications.map((cert: string, i: number) => (
+                                            {item.certifications?.map((cert, i) => (
                                                 <span
                                                     key={i}
                                                     className="bg-orange-100 text-orange-800 text-[10px] px-1.5 py-0.5 rounded"
@@ -318,7 +317,7 @@ export default function OrderDetailPage() {
                                     </div>
 
                                     <div className="text-right text-sm">
-                                        <p className="font-medium">KES {item.total.toLocaleString()}</p>
+                                        <p className="font-medium">KES {(item.price * item.quantity).toLocaleString()}</p>
                                         <p className="text-gray-500 text-xs mt-1">{item.quantity} × KES {item.price.toLocaleString()}</p>
                                     </div>
                                 </div>
@@ -339,26 +338,29 @@ export default function OrderDetailPage() {
 
                             <div className="space-y-6 pl-10 relative">
                                 {STATUS_STEPS.map((step, index) => {
-                                    const isCompleted = STATUS_STEPS.findIndex(s => s.id === order.status) >= index;
+                                    const currentStepIndex = STATUS_STEPS.findIndex(s => s.id === order.status);
+                                    const isCompleted = currentStepIndex > index;
                                     const isActive = step.id === order.status;
                                     const Icon = step.icon;
 
                                     return (
                                         <div key={step.id} className="relative">
                                             <div className={`absolute -left-10 top-0.5 flex h-6 w-6 items-center justify-center rounded-full ${isCompleted
-                                                    ? "bg-emerald-500"
-                                                    : index === STATUS_STEPS.findIndex(s => s.id === order.status)
-                                                        ? "bg-orange-500"
-                                                        : "bg-gray-300"
+                                                ? "bg-emerald-500"
+                                                : isActive
+                                                    ? "bg-orange-500"
+                                                    : "bg-gray-300"
                                                 }`}>
-                                                <Icon className={`h-3.5 w-3.5 ${isCompleted ? "text-white" : "text-white"}`} />
+                                                <Icon className="h-3.5 w-3.5 text-white" />
                                             </div>
 
                                             <div>
-                                                <p className={`font-medium ${isCompleted ? "text-gray-900" : "text-gray-500"}`}>
+                                                <p className={`font-medium ${isCompleted || isActive ? "text-gray-900" : "text-gray-500"}`}>
                                                     {step.label}
                                                 </p>
-                                                <p className="text-xs text-gray-500 mt-0.5">{step.time}</p>
+                                                <p className="text-xs text-gray-500 mt-0.5">
+                                                    {isCompleted ? "Completed" : isActive ? "Current" : "Pending"}
+                                                </p>
                                             </div>
                                         </div>
                                     );
@@ -376,6 +378,7 @@ export default function OrderDetailPage() {
                                 onChange={(e) => setSelectedStatus(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none bg-white mb-3"
                             >
+                                <option value="pending">Pending</option>
                                 <option value="confirmed">Confirmed</option>
                                 <option value="processing">Processing</option>
                                 <option value="shipped">Shipped</option>
@@ -383,7 +386,7 @@ export default function OrderDetailPage() {
                             </select>
                             <Button
                                 onClick={handleStatusUpdate}
-                                disabled={selectedStatus === order.status}
+                                disabled={selectedStatus === order.status || !selectedStatus}
                                 className="w-full bg-orange-600 hover:bg-orange-700"
                             >
                                 Update Status
@@ -394,44 +397,25 @@ export default function OrderDetailPage() {
                     {/* Payment Info */}
                     <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
                         <h2 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                            <CreditCard className="h-5 w-5 text-gray-500" /> Payment Information
+                            <CreditCard className="h-5 w-5 text-gray-500" /> Order Summary
                         </h2>
 
                         <div className="space-y-3">
-                            <div className="flex justify-between">
-                                <span className="text-gray-500">Payment Method</span>
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${order.paymentMethod === "cod"
-                                        ? "bg-emerald-100 text-emerald-800"
-                                        : "bg-orange-100 text-orange-800"
-                                    }`}>
-                                    {order.paymentMethod === "cod" ? "Cash on Delivery" : "M-Pesa"}
-                                </span>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Subtotal</span>
+                                <span className="font-medium">KES {order.totals?.subtotal?.toLocaleString() || "0"}</span>
                             </div>
-
-                            {order.paymentMethod === "mpesa" && order.mpesaCode && (
-                                <div className="flex justify-between">
-                                    <span className="text-gray-500">M-Pesa Code</span>
-                                    <span className="font-medium text-gray-900">{order.mpesaCode}</span>
-                                </div>
-                            )}
-
-                            <div className="pt-3 border-t border-gray-200">
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Subtotal</span>
-                                    <span className="font-medium">KES {order.subtotal.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">Delivery</span>
-                                    <span className="font-medium">KES {order.delivery.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-sm">
-                                    <span className="text-gray-500">VAT (16%)</span>
-                                    <span className="font-medium">KES {order.vat.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
-                                    <span>Total</span>
-                                    <span className="text-orange-600">KES {order.total.toLocaleString()}</span>
-                                </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">Delivery</span>
+                                <span className="font-medium">KES {order.totals?.delivery?.toLocaleString() || "0"}</span>
+                            </div>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-gray-500">VAT (16%)</span>
+                                <span className="font-medium">KES {order.totals?.vat?.toLocaleString() || "0"}</span>
+                            </div>
+                            <div className="flex justify-between font-bold text-lg pt-2 border-t border-gray-200">
+                                <span>Total</span>
+                                <span className="text-orange-600">KES {order.totals?.grandTotal?.toLocaleString() || "0"}</span>
                             </div>
                         </div>
                     </div>

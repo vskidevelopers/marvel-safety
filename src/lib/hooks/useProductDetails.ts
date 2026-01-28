@@ -1,6 +1,6 @@
 "use client";
 import { useState, useEffect } from "react";
-import { useProductFunctions } from "@/lib/firebase";
+import { fetchProductById } from "@/lib/firebase";
 
 interface Product {
   id: string;
@@ -16,8 +16,6 @@ export function useProductDetails(productId: string | null | undefined) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const { fetchProductDetail } = useProductFunctions();
-
   useEffect(() => {
     // Don't fetch if no productId is provided
     if (!productId) {
@@ -31,13 +29,13 @@ export function useProductDetails(productId: string | null | undefined) {
       setError(null);
 
       try {
-        const result = await fetchProductDetail(productId);
+        const result = await fetchProductById(productId);
         if (result.success && result.data) {
           setProduct(result.data as Product);
         } else {
-          setError(result.message || "Product not found");
+          setError(result?.error || "Product not found");
           setProduct(null);
-          console.error("Fetch product detail error:", result.message);
+          console.error("Fetch product detail error:", result.error);
         }
       } catch (err) {
         setError("Network error");
@@ -49,7 +47,7 @@ export function useProductDetails(productId: string | null | undefined) {
     };
 
     loadProductDetail();
-  }, [productId, fetchProductDetail]);
+  }, [productId, fetchProductById]);
 
   return { product, loading, error };
 }

@@ -13,60 +13,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { DeleteProductModal } from "./delete-product-modal";
 import { toast } from "sonner";
-
-// Mock products (replace with Convex query later)
-const MOCK_PRODUCTS = [
-    {
-        id: "1",
-        name: "EN397 Yellow Hard Hat",
-        category: "Head & Face Protection",
-        price: 850,
-        stock: 124,
-        status: "active",
-        image: "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_40/v1763916334/hard-hat-yellow.jpg",
-        sku: "MS-HF-HH-01",
-    },
-    {
-        id: "2",
-        name: "Steel Toe Safety Boots",
-        category: "Safety Footwear",
-        price: 3500,
-        stock: 45,
-        status: "active",
-        image: "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_40/v1763916335/safety-boots.jpg",
-        sku: "MS-FT-BT-01",
-    },
-    {
-        id: "3",
-        name: "Class 2 Reflective Vest",
-        category: "Visibility Wear",
-        price: 450,
-        stock: 8,
-        status: "low_stock",
-        image: "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_40/v1763916333/high-vis-vest.jpg",
-        sku: "MS-HV-VST-01",
-    },
-    {
-        id: "4",
-        name: "NP 306 Disposable Masks",
-        category: "Respiratory Protection",
-        price: 80,
-        stock: 0,
-        status: "out_of_stock",
-        image: "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_40/v1763916332/np306-mask.jpg",
-        sku: "MS-RES-NP306-01",
-    },
-    {
-        id: "5",
-        name: "Beekeeper Suit with Veil",
-        category: "Body Protection Wear",
-        price: 3500,
-        stock: 200,
-        status: "active",
-        image: "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_40/v1763916331/beekeeper-suit.jpg",
-        sku: "MS-BDY-BEE-01",
-    },
-];
+import { useProducts } from "@/lib/hooks/useProducts";
+import type { Product } from "@/app/types/product";
 
 // Status config
 const STATUS_CONFIG = {
@@ -76,52 +24,33 @@ const STATUS_CONFIG = {
 };
 
 export default function AdminProductsPage() {
-    const [products, setProducts] = useState<any[]>([]);
-    const [loading, setLoading] = useState(true);
+    const {
+        products,
+        loading,
+        error,
+        deleteProduct,
+        refetch
+    } = useProducts();
+
     const [search, setSearch] = useState("");
     const [categoryFilter, setCategoryFilter] = useState("all");
     const [currentPage, setCurrentPage] = useState(1);
     const productsPerPage = 10;
-    // Add to your component state
     const [deleteModal, setDeleteModal] = useState<{
         open: boolean;
-        product: any | null
+        product: Product | null;
     }>({
         open: false,
-        product: null
+        product: null,
     });
-
-    // Add delete function
-    const handleDelete = async (productId: string) => {
-        try {
-            // TODO: Replace with Convex mutation
-            await new Promise(resolve => setTimeout(resolve, 500)); // Simulate API call
-            setProducts(prev => prev.filter(p => p.id !== productId));
-            toast.success("Product deleted successfully");
-        } catch (error) {
-            toast.error("Failed to delete product");
-            console.error(error);
-        }
-    };
-
-    // Simulate data fetch
-    useEffect(() => {
-        const fetchProducts = async () => {
-            setLoading(true);
-            // Simulate API delay
-            await
-                await new Promise(resolve => setTimeout(resolve, 800));
-            setProducts(MOCK_PRODUCTS);
-            setLoading(false);
-        };
-        fetchProducts();
-    }, []);
 
     // Filter products
     const filteredProducts = products.filter(product => {
-        const matchesSearch = product.name.toLowerCase().includes(search.toLowerCase()) ||
+        const matchesSearch =
+            product.name.toLowerCase().includes(search.toLowerCase()) ||
             product.sku.toLowerCase().includes(search.toLowerCase());
-        const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+        const matchesCategory =
+            categoryFilter === "all" || product.category === categoryFilter;
         return matchesSearch && matchesCategory;
     });
 
@@ -141,6 +70,64 @@ export default function AdminProductsPage() {
             </span>
         );
     };
+
+    const getStockStatus = (stock: number) => {
+        if (stock === 0) return "bg-red-100 text-red-800";
+        if (stock < 10) return "bg-orange-100 text-orange-800";
+        return "bg-green-100 text-green-800";
+    };
+
+    const handleDelete = async (productId: string) => {
+        try {
+            const result = await deleteProduct(productId);
+            if (result.success) {
+                toast.success("Product deleted successfully");
+                refetch(); // Refresh the product list
+                setDeleteModal({ open: false, product: null });
+            } else {
+                throw new Error(result.error || "Failed to delete product");
+            }
+        } catch (error: any) {
+            console.error("❌ [Admin] Delete error:", error);
+            toast.error("Failed to delete product", {
+                description: error.message || "Please try again",
+            });
+        }
+    };
+
+    // Handle errors
+    if (error) {
+        return (
+            <div className="space-y-6">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold text-gray-900">Products</h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            Manage your Marvel Safety product catalog
+                        </p>
+                    </div>
+                    <Link href="/admin/products/new">
+                        <Button className="bg-orange-600 hover:bg-orange-700">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Product
+                        </Button>
+                    </Link>
+                </div>
+
+                <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8 text-center">
+                    <div className="text-red-500 mb-4">❌</div>
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">Failed to load products</h3>
+                    <p className="text-gray-500">{error}</p>
+                    <Button
+                        onClick={() => refetch()}
+                        className="mt-4 bg-orange-600 hover:bg-orange-700"
+                    >
+                        Retry
+                    </Button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">
@@ -248,9 +235,12 @@ export default function AdminProductsPage() {
                                                 <div className="flex items-center gap-3">
                                                     <div className="relative w-10 h-10 bg-gray-100 rounded overflow-hidden shrink-0">
                                                         <img
-                                                            src={product.image}
+                                                            src={product.primaryImage}
                                                             alt={product.name}
                                                             className="w-full h-full object-cover"
+                                                            onError={(e) => {
+                                                                (e.target as HTMLImageElement).src = "/placeholder-image.jpg";
+                                                            }}
                                                         />
                                                     </div>
                                                     <div>
@@ -262,13 +252,8 @@ export default function AdminProductsPage() {
                                             <td className="px-6 py-4 text-gray-600">{product.category}</td>
                                             <td className="px-6 py-4 font-medium text-gray-900">KES {product.price.toLocaleString()}</td>
                                             <td className="px-6 py-4">
-                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${product.stock === 0
-                                                    ? "bg-red-100 text-red-800"
-                                                    : product.stock < 10
-                                                        ? "bg-orange-100 text-orange-800"
-                                                        : "bg-green-100 text-green-800"
-                                                    }`}>
-                                                    {product.stock}
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium ${getStockStatus(product.stockCount)}`}>
+                                                    {product.stockCount}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">{getStatusBadge(product.status)}</td>
@@ -280,7 +265,7 @@ export default function AdminProductsPage() {
                                                         </Button>
                                                     </DropdownMenuTrigger>
                                                     <DropdownMenuContent align="end" className="w-40">
-                                                        <Link href={`/admin/products/${product.id}/edit`}>
+                                                        <Link href={`/admin/products/${product.id}/edit`} passHref>
                                                             <DropdownMenuItem className="cursor-pointer">
                                                                 <Edit className="h-4 w-4 mr-2" />
                                                                 Edit
@@ -288,7 +273,7 @@ export default function AdminProductsPage() {
                                                         </Link>
                                                         <DropdownMenuItem
                                                             className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
-                                                            onClick={() => setDeleteModal({ open: true, product: product })}
+                                                            onClick={() => setDeleteModal({ open: true, product })}
                                                         >
                                                             <Trash2 className="h-4 w-4 mr-2" />
                                                             Delete
@@ -349,13 +334,14 @@ export default function AdminProductsPage() {
                     </>
                 )}
             </div>
+
             {/* Delete Product Modal */}
             <DeleteProductModal
                 open={deleteModal.open}
                 onOpenChange={(open) => setDeleteModal({ open, product: deleteModal.product })}
                 onConfirm={() => deleteModal.product ? handleDelete(deleteModal.product.id) : Promise.resolve()}
                 productName={deleteModal.product?.name || ""}
-                productImage={deleteModal.product?.image}
+                productImage={deleteModal.product?.primaryImage}
             />
         </div>
     );

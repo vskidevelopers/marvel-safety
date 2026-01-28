@@ -7,7 +7,7 @@ import { Upload, Plus, X, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/categories";
 import { useCloudinaryUpload } from "@/lib/hooks/useCloudinaryUpload";
-import { useProductFunctions } from "@/lib/firebase";
+import { useProducts } from "@/lib/hooks/useProducts";
 import { toast } from "sonner";
 
 export default function NewProductPage() {
@@ -41,7 +41,7 @@ export default function NewProductPage() {
     // api may be typed as an empty object in some setups; cast to any to access generated functions
     const router = useRouter();
     const { uploadImage, isUploading, error: uploadError } = useCloudinaryUpload();
-    const { addProduct } = useProductFunctions();
+    const { createProduct } = useProducts();
 
 
     const handleInputChange = (
@@ -159,7 +159,7 @@ export default function NewProductPage() {
             };
 
             // Call Firebase addProduct
-            const result = await addProduct(productData);
+            const result = await createProduct(productData);
 
             if (result.success) {
                 toast.success("Product created successfully!");
@@ -168,16 +168,16 @@ export default function NewProductPage() {
                 // Handle known Firebase errors
                 let errorMessage = "Failed to create product. Please try again.";
 
-                if (result.message.includes("permission-denied")) {
+                if (result.error?.includes("permission-denied")) {
                     errorMessage = "You don't have permission to add products.";
-                } else if (result.message.includes("invalid-argument")) {
+                } else if (result.error?.includes("invalid-argument")) {
                     errorMessage = "Invalid product data. Please check your inputs.";
-                } else if (result.message.includes("network")) {
+                } else if (result.error?.includes("network")) {
                     errorMessage = "Network error. Please check your connection and try again.";
                 }
 
                 toast.error(errorMessage);
-                console.error("Product creation failed:", result.message);
+                console.error("Product creation failed:", result.error);
             }
 
         } catch (error: any) {
@@ -448,26 +448,7 @@ export default function NewProductPage() {
                                 />
                             </div>
 
-                            {/* <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                    Stock Quantity <span className="text-red-500">*</span>
-                                </label>
-                                <input
-                                    type="number"
-                                    name="stockCount"
-                                    value={formData.stockCount}
-                                    onChange={handleInputChange}
-                                    className={`w-full px-3 py-2.5 border rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition ${errors.stockCount ? "border-red-500" : "border-gray-300"
-                                        }`}
-                                    placeholder="0"
-                                    min="0"
-                                />
-                                {errors.stockCount && (
-                                    <p className="text-red-600 text-xs mt-1 flex items-center gap-1">
-                                        <AlertCircle className="h-3 w-3" /> {errors.stockCount}
-                                    </p>
-                                )}
-                            </div> */}
+
 
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">

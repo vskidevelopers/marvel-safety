@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCart } from "@/app/context/cart-context";
-import { useProductFunctions } from "@/lib/firebase";
 import { toast } from "sonner";
 import { CartItem } from "../types/cart";
+import { useProducts } from "@/lib/hooks/useProducts";
 
 // ✅ Simplified product interface (only essential fields)
 interface Product {
@@ -40,7 +40,7 @@ export function ProductDetail({ productId }: ProductDetailProps) {
     const [selectedImage, setSelectedImage] = useState<string>("");
     const [loading, setLoading] = useState(true);
 
-    const { fetchProductDetail } = useProductFunctions();
+    const { fetchProductById } = useProducts();
     const { addItem } = useCart();
     const router = useRouter();
 
@@ -48,7 +48,7 @@ export function ProductDetail({ productId }: ProductDetailProps) {
     useEffect(() => {
         const loadProduct = async () => {
             try {
-                const result = await fetchProductDetail(productId);
+                const result = await fetchProductById(productId);
                 if (result.success && result.data) {
                     const productData = result.data as Product;
                     setProduct(productData);

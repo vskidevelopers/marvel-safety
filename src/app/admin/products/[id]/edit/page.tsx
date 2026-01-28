@@ -6,41 +6,17 @@ import Link from "next/link";
 import { Upload, Plus, X, AlertCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { CATEGORIES } from "@/lib/categories";
+import { updateProduct, fetchProductById } from "@/lib/firebase";
+import type { Product } from "@/app/types/product";
+import { toast } from "sonner";
 
-// Mock product data (replace with Convex query)
-const MOCK_PRODUCT = {
-    id: "1",
-    name: "EN397 Yellow Hard Hat",
-    slug: "en397-yellow-hard-hat",
-    description: "KEBS-certified industrial hard hat with 4-point harness for maximum comfort and safety. Meets EN397 standards for impact and penetration resistance.",
-    shortDescription: "Industrial head protection",
-    price: 850,
-    oldPrice: 1000,
-    stockCount: 124,
-    inStock: true,
-    category: "head-face",
-    subcategory: "",
-    tags: "construction,impact-resistant",
-    certifications: ["KEBS", "EN397"],
-    primaryImage: "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_400/v1763916334/hard-hat-yellow.jpg",
-    additionalImages: [
-        "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_400/v1763916334/hard-hat-yellow.jpg",
-        "https://res.cloudinary.com/dlmmsamck/image/upload/f_auto,q_auto,w_400/v1763916334/hard-hat-yellow.jpg",
-    ],
-    specs: {
-        material: "HDPE",
-        size: "Universal (54-62cm)",
-        color: "Yellow",
-        weight: "420",
-        resistance: "impact",
-    },
-    sku: "MS-HF-HH-01",
-    supplier: "3M Kenya",
-};
+const CERTIFICATION_OPTIONS = ["KEBS", "EN397", "EN166", "EN149", "ISO 45001", "ANSI Z87.1"];
 
 export default function EditProductPage() {
     const router = useRouter();
     const params = useParams();
+    const productId = params?.id as string;
+
     const [formData, setFormData] = useState({
         name: "",
         slug: "",
@@ -53,7 +29,7 @@ export default function EditProductPage() {
         category: CATEGORIES[0].id,
         subcategory: "",
         tags: "",
-        certifications: ["KEBS"],
+        certifications: ["KEBS"] as string[],
         specs: {
             material: "",
             size: "",
@@ -72,46 +48,68 @@ export default function EditProductPage() {
     const [loading, setLoading] = useState(true);
     const [submitting, setSubmitting] = useState(false);
 
-    // Load product data
+    // Load product data from Firebase
     useEffect(() => {
         const loadProduct = async () => {
-            // Simulate API fetch
-            await new Promise(resolve => setTimeout(resolve, 600));
+            if (!productId) {
+                toast.error("Invalid product ID");
+                router.push("/admin/products");
+                return;
+            }
 
-            // Format mock data for form
-            setFormData({
-                name: MOCK_PRODUCT.name,
-                slug: MOCK_PRODUCT.slug,
-                description: MOCK_PRODUCT.description,
-                shortDescription: MOCK_PRODUCT.shortDescription,
-                price: MOCK_PRODUCT.price.toString(),
-                oldPrice: MOCK_PRODUCT.oldPrice?.toString() || "",
-                stockCount: MOCK_PRODUCT.stockCount.toString(),
-                inStock: MOCK_PRODUCT.inStock,
-                category: MOCK_PRODUCT.category,
-                subcategory: MOCK_PRODUCT.subcategory || "",
-                tags: MOCK_PRODUCT.tags || "",
-                certifications: MOCK_PRODUCT.certifications,
-                specs: {
-                    material: MOCK_PRODUCT.specs.material || "",
-                    size: MOCK_PRODUCT.specs.size || "",
-                    color: MOCK_PRODUCT.specs.color || "",
-                    weight: MOCK_PRODUCT.specs.weight?.toString() || "",
-                    resistance: MOCK_PRODUCT.specs.resistance || "",
-                },
-                sku: MOCK_PRODUCT.sku,
-                supplier: MOCK_PRODUCT.supplier || "",
-            });
+            try {
+                setLoading(true);
+                const result = await fetchProductById(productId);
 
-            setExistingImages([
-                MOCK_PRODUCT.primaryImage,
-                ...MOCK_PRODUCT.additionalImages
-            ]);
-            setLoading(false);
+                if (result.success && result.data) {
+                    const product = result.data as Product;
+
+                    // Format product data for form
+                    setFormData({
+                        name: product.name || "",
+                        slug: product.slug || "",
+                        description: product.description || "",
+                        shortDescription: product.shortDescription || "",
+                        price: product.price?.toString() || "",
+                        oldPrice: product.oldPrice?.toString() || "",
+                        stockCount: product.stockCount?.toString() || "0",
+                        inStock: product.inStock || false,
+                        category: product.category || CATEGORIES[0].id,
+                        subcategory: product?.subcategory || "",
+                        tags: Array.isArray(product.tags) ? product.tags.join(", ") : product.tags || "",
+                        certifications: Array.isArray(product.certifications) ? product.certifications : ["KEBS"],
+                        specs: {
+                            material: product.specs?.material || "",
+                            size: product.specs?.size || "",
+                            color: product.specs?.color || "",
+                            weight: product.specs?.weight?.toString() || "",
+                            resistance: Array.isArray(product.specs?.resistance)
+                                ? product.specs.resistance.join(", ")
+                                : product.specs?.resistance || "",
+                        },
+                        sku: product.sku || "",
+                        supplier: product?.supplier || "",
+                    });
+
+                    // Set images
+                    const allImages = [product.primaryImage, ...(product.additionalImages || [])]
+                        .filter(Boolean) as string[];
+                    setExistingImages(allImages);
+                } else {
+                    toast.error("Product not found");
+                    router.push("/admin/products");
+                }
+            } catch (error) {
+                console.error("❌ [Edit Product] Load error:", error);
+                toast.error("Failed to load product");
+                router.push("/admin/products");
+            } finally {
+                setLoading(false);
+            }
         };
 
         loadProduct();
-    }, [params.id]);
+    }, [productId, router]);
 
     const handleInputChange = (
         e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -181,17 +179,54 @@ export default function EditProductPage() {
 
         setSubmitting(true);
 
-        // TODO: Integrate with Convex update mutation
         try {
-            await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate API call
-            router.push("/admin/products");
-        } catch (error) {
-            console.error("Update failed", error);
+            // Prepare product data for Firebase
+            const productData: Partial<Product> = {
+                name: formData.name,
+                slug: formData.slug,
+                description: formData.description,
+                shortDescription: formData.shortDescription,
+                price: parseFloat(formData.price),
+                oldPrice: formData.oldPrice ? parseFloat(formData.oldPrice) : undefined,
+                stockCount: parseInt(formData.stockCount),
+                inStock: formData.inStock,
+                category: formData.category,
+                subcategory: formData.subcategory,
+                tags: formData.tags.split(",").map(tag => tag.trim()).filter(Boolean),
+                certifications: formData.certifications,
+                specs: {
+                    material: formData.specs.material,
+                    size: formData.specs.size,
+                    color: formData.specs.color,
+                    weight: formData.specs.weight ? parseFloat(formData.specs.weight) : undefined,
+                    resistance: formData.specs.resistance.split(",").map(r => r.trim()).filter(Boolean),
+                },
+                sku: formData.sku,
+                supplier: formData.supplier,
+                primaryImage: existingImages[0] || "/placeholder-image.jpg",
+                additionalImages: existingImages.slice(1),
+                status: parseInt(formData.stockCount) > 0
+                    ? (parseInt(formData.stockCount) < 10 ? "low_stock" : "active")
+                    : "out_of_stock",
+            };
+
+            const result = await updateProduct(productId, productData);
+
+            if (result.success) {
+                toast.success("Product updated successfully!");
+                router.push("/admin/products");
+            } else {
+                throw new Error(result.error || "Failed to update product");
+            }
+        } catch (error: any) {
+            console.error("❌ [Edit Product] Update error:", error);
+            toast.error("Failed to update product", {
+                description: error.message || "Please try again",
+            });
+        } finally {
             setSubmitting(false);
         }
     };
-
-    const CERTIFICATION_OPTIONS = ["KEBS", "EN397", "EN166", "EN149", "ISO 45001", "ANSI Z87.1"];
 
     if (loading) {
         return (
@@ -594,7 +629,6 @@ export default function EditProductPage() {
                                 <div className="grid grid-cols-3 gap-3">
                                     {existingImages.map((url, index) => (
                                         <div key={`existing-${index}`} className="relative aspect-square">
-                                            {/* Image container (without overflow-hidden) */}
                                             <div className="w-full h-full bg-gray-100 rounded-lg border border-gray-200 overflow-hidden">
                                                 <img
                                                     src={url}
@@ -602,8 +636,6 @@ export default function EditProductPage() {
                                                     className="w-full h-full object-cover"
                                                 />
                                             </div>
-
-                                            {/* Delete button positioned outside */}
                                             <button
                                                 type="button"
                                                 onClick={() => removeExistingImage(index)}
