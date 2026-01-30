@@ -71,7 +71,13 @@ export function Navbar({ cartCount = 0, isAuthenticated = false }: NavbarProps) 
                 <nav className="hidden items-center justify-between lg:flex">
                     <div className="flex items-center gap-8">
                         <Link href="/" className="flex items-center gap-2">
-                            <span className="text-xl font-bold text-orange-600">Marvel Safety</span>
+                            {/* ✅ Logo */}
+                            <img
+                                src="/images/marvel-logo.png"
+                                alt="Marvel Safety Logo"
+                                className="h-8 w-auto" // Adjust height as needed
+                            />
+
                         </Link>
                         <div className="flex items-center gap-5"> {/* Tighter gap */}
                             <Link

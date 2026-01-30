@@ -67,7 +67,7 @@ export function FeaturedProducts() {
                                     )}
                                 </div>
                                 <Link
-                                    href={`/products/${product.slug}`}
+                                    href={`/products`}
                                     className="mt-4 w-full block text-center border border-gray-800 text-gray-800 hover:bg-gray-800 hover:text-white font-medium py-2 rounded transition-colors text-sm"
                                 >
                                     View Details

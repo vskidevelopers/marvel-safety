@@ -26,13 +26,23 @@ export function Footer() {
           {/* Brand */}
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <div className="bg-orange-600 text-white p-1.5 rounded font-bold text-lg">MS</div>
-              <span className="font-bold text-xl">Marvel Safety</span>
+              <img
+                src="/images/marvel-footer.png"
+                alt="Marvel Safety Logo"
+                className="h-6 w-auto"
+              />
+
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
               KEBS-certified wearable PPE supplier serving Nairobi and nationwide Kenya.
               Trusted by construction firms, apiaries, factories, and healthcare workers.
             </p>
+            <Link
+              href="/track"
+              className="inline-block mt-4 px-4 py-2 bg-orange-600 hover:bg-orange-700 text-white text-sm font-medium rounded-lg transition-colors"
+            >
+              Track Your Order
+            </Link>
           </div>
 
           {/* Shop */}
@@ -69,7 +79,10 @@ export function Footer() {
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span>info@marvelsafety.co.ke</span>
+                <div className="flex flex-col">
+                  <span>info@marvelsafetysuppliers.co.ke</span>
+                  <span>marvelsafetyhub@gmail.com</span>
+                </div>
               </li>
             </ul>
           </div>
@@ -87,13 +100,13 @@ export function Footer() {
                 </li>
                 <li>
                   <a
-                    href="https://wa.me/254700123456"
+                    href="https://wa.me/254741900286"
                     className="hover:text-orange-400 transition-colors flex items-center gap-2"
                     target="_blank"
                     rel="noopener noreferrer"
                   >
                     <MessageCircle className="h-4 w-4" />
-                    WhatsApp: +254 700 123 456
+                    WhatsApp:  0741 900 286
                   </a>
                 </li>
                 <li>

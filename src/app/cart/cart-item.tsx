@@ -92,7 +92,7 @@ export function CartItemComponent({ item }: { item: CartItem }) {
                 </div>
             </div>
 
-            <div className="text-right font-bold text-orange-600 w-20 flex-shrink-0">
+            <div className="text-right font-bold text-orange-600 w-20   ">
                 KES {safeSubtotal.toLocaleString()}
             </div>
         </div>

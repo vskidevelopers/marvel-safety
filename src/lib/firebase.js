@@ -530,3 +530,38 @@ export async function updateQuoteStatus(quoteId, newStatus) {
     return { success: false, error: error.message };
   }
 }
+
+// ✅ Track order by ID and phone
+
+export async function trackOrderByIdAndPhone(orderId, phone) {
+  try {
+    const orderRef = doc(db, "orders", orderId);
+    const orderSnap = await getDoc(orderRef);
+
+    if (orderSnap.exists()) {
+      const orderData = orderSnap.data();
+      // Check if the phone number matches the one associated with the order
+      if (orderData.customer?.phone === phone) {
+        const foundOrder = { id: orderSnap.id, ...orderData };
+        console.log("✅ [Firebase] Order found for tracking!", foundOrder);
+        return { success: true, data: foundOrder };
+      } else {
+        // Order found by ID, but phone number doesn't match
+        console.warn(
+          "⚠️ [Firebase] Order found by ID, but phone number mismatch.",
+        );
+        return {
+          success: false,
+          error: "Order not found or phone number does not match",
+        };
+      }
+    } else {
+      // Document with the given orderId does not exist
+      console.log("❌ [Firebase] Order not found for tracking by ID.");
+      return { success: false, error: "Order not found" };
+    }
+  } catch (error) {
+    console.error("❌ [Firebase] trackOrderByIdAndPhone error:", error);
+    return { success: false, error: error.message };
+  }
+}

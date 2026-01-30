@@ -2,29 +2,9 @@
 
 import { useState } from "react";
 import { Package, Truck, CheckCircle, Clock } from "lucide-react";
-import { OrderSummary } from "../order/order-summary";
-
-// Mock orders database (replace with Convex query later)
-const MOCK_ORDERS = [
-    {
-        id: "MVL-20251202-00147",
-        phone: "+254712345678",
-        status: "shipped",
-        items: [
-            { name: "EN397 Yellow Hard Hat", qty: 5, total: 4250 },
-            { name: "NP 306 Masks (Box of 50)", qty: 2, total: 7000 },
-        ],
-        shipping: {
-            name: "John Doe",
-            location: "Plot 123, Industrial Area, Nairobi",
-            city: "Nairobi",
-        },
-        subtotal: 15750,
-        delivery: 300,
-        vat: 2520,
-        total: 18570,
-    },
-];
+import { TrackOrderSummary } from "../order/order-summary";
+import { useTrackOrder } from "@/lib/hooks/useTrackOrder";
+import type { OrderData } from "../types/order";
 
 const STATUS_STEPS = {
     confirmed: { label: "Order Confirmed", icon: CheckCircle, color: "bg-emerald-500" },
@@ -34,28 +14,41 @@ const STATUS_STEPS = {
 };
 
 export default function TrackOrderPage() {
+    const { trackOrder, loading, error: apiError } = useTrackOrder();
     const [orderId, setOrderId] = useState("");
     const [phone, setPhone] = useState("");
-    const [order, setOrder] = useState<any>(null);
-    const [error, setError] = useState("");
-    const [loading, setLoading] = useState(false);
+    const [order, setOrder] = useState<OrderData | null>(null);
+    const [formError, setFormError] = useState("");
 
-    const handleTrack = (e: React.FormEvent) => {
+    const handleTrack = async (e: React.FormEvent) => {
         e.preventDefault();
-        setLoading(true);
-        setError("");
+        setFormError("");
 
-        // Find order by ID + phone
-        const found = MOCK_ORDERS.find(
-            o => o.id === orderId && o.phone === phone
-        );
-
-        if (found) {
-            setOrder(found);
-        } else {
-            setError("Order not found. Please check your details.");
+        if (!orderId.trim() || !phone.trim()) {
+            setFormError("Please enter both order number and phone number");
+            return;
         }
-        setLoading(false);
+
+        try {
+            console.log("initiating track with orderId >>", orderId);
+            console.log("initiating track with phone >>", phone);
+
+            const foundOrder = await trackOrder(orderId, phone);
+
+            setOrder(foundOrder?.data);
+        } catch (err: any) {
+            setFormError(err.message || "Order not found. Please check your details.");
+        }
+    };
+
+    const getStatusMessage = (status: string) => {
+        switch (status) {
+            case "confirmed": return "Order placed successfully";
+            case "processing": return "Preparing your order";
+            case "shipped": return "Out for delivery";
+            case "delivered": return "Order delivered!";
+            default: return "";
+        }
     };
 
     return (
@@ -99,9 +92,9 @@ export default function TrackOrderPage() {
                                 />
                             </div>
 
-                            {error && (
+                            {(formError || apiError) && (
                                 <div className="text-red-600 text-sm p-2 bg-red-50 rounded">
-                                    {error}
+                                    {formError || apiError}
                                 </div>
                             )}
 
@@ -128,8 +121,8 @@ export default function TrackOrderPage() {
                                 <div className="space-y-6 pl-10 relative">
                                     {Object.entries(STATUS_STEPS).map(([key, step], index) => {
                                         const Icon = step.icon;
-                                        const isCompleted = Object.keys(STATUS_STEPS).indexOf(order.status) >= index;
-                                        const isActive = key === order.status;
+                                        const isCompleted = Object.keys(STATUS_STEPS).indexOf(order.status || "confirmed") >= index;
+                                        const isActive = key === (order.status || "confirmed");
 
                                         return (
                                             <div key={key} className="relative">
@@ -144,11 +137,7 @@ export default function TrackOrderPage() {
                                                     </p>
                                                     {isActive && (
                                                         <p className="text-xs text-gray-500 mt-1">
-                                                            {key === "shipped"
-                                                                ? "Out for delivery"
-                                                                : key === "confirmed"
-                                                                    ? "Order placed successfully"
-                                                                    : ""}
+                                                            {getStatusMessage(key)}
                                                         </p>
                                                     )}
                                                 </div>
@@ -169,7 +158,7 @@ export default function TrackOrderPage() {
                                     <div className="flex items-start gap-2">
                                         <Clock className="h-4 w-4 text-orange-600 mt-0.5 flex-shrink-0" />
                                         <p className="text-xs text-gray-700">
-                                            {order.status === "cod"
+                                            {order.payment?.method === "cod"
                                                 ? "Have cash ready for delivery agent"
                                                 : "Track your delivery progress here"}
                                         </p>
@@ -179,18 +168,8 @@ export default function TrackOrderPage() {
                         </div>
 
                         {/* Order Summary */}
-                        <OrderSummary order={order} />
+                        <TrackOrderSummary order={order} />
 
-                        {/* Save Order CTA */}
-                        <div className="bg-white rounded-lg shadow-sm p-6">
-                            <h3 className="text-lg font-bold text-gray-900 mb-3">Save Future Orders</h3>
-                            <p className="text-gray-600 text-sm mb-4">
-                                Create an account to save your order history and track future orders without entering details.
-                            </p>
-                            <button className="w-full bg-orange-600 hover:bg-orange-700 text-white font-bold py-2.5 rounded-md transition-colors">
-                                Create Account / Login
-                            </button>
-                        </div>
                     </div>
                 )}
             </div>
