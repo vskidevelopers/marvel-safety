@@ -24,6 +24,7 @@ export default async function RootLayout({
 
   return (
     <html lang="en">
+      <meta name="google-site-verification" content="3W080oMKpfUJULfkGvH99dZuUqTUtDakTbu86wBsB8s" />
       <body>
 
         {/* <ConvexClientProvider> */}

@@ -565,3 +565,71 @@ export async function trackOrderByIdAndPhone(orderId, phone) {
     return { success: false, error: error.message };
   }
 }
+
+// ✅ Fetch total orders count
+export async function fetchTotalOrdersCount() {
+  console.log("📊 [Firebase] Fetching total orders count...");
+
+  try {
+    const ordersSnapshot = await getDocs(collection(db, "orders"));
+    const count = ordersSnapshot.size;
+
+    console.log("✅ [Firebase] Total orders count:", count);
+    return { success: true, data: count };
+  } catch (error) {
+    console.error("❌ [Firebase] fetchTotalOrdersCount error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ✅ Fetch total products count
+export async function fetchTotalProductsCount() {
+  console.log("📦 [Firebase] Fetching total products count...");
+
+  try {
+    const productsSnapshot = await getDocs(collection(db, "products"));
+    const count = productsSnapshot.size;
+
+    console.log("✅ [Firebase] Total products count:", count);
+    return { success: true, data: count };
+  } catch (error) {
+    console.error("❌ [Firebase] fetchTotalProductsCount error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ✅ Fetch total quotes count
+export async function fetchTotalQuotesCount() {
+  console.log("💬 [Firebase] Fetching total quotes count...");
+
+  try {
+    const quotesSnapshot = await getDocs(collection(db, "quotes"));
+    const count = quotesSnapshot.size;
+
+    console.log("✅ [Firebase] Total quotes count:", count);
+    return { success: true, data: count };
+  } catch (error) {
+    console.error("❌ [Firebase] fetchTotalQuotesCount error:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// ✅ Fetch low stock items count (stockCount < 10)
+export async function fetchLowStockItemsCount() {
+  console.log("⚠️ [Firebase] Fetching low stock items count...");
+
+  try {
+    const lowStockQuery = query(
+      collection(db, "products"),
+      where("stockCount", "<", 10),
+    );
+    const lowStockSnapshot = await getDocs(lowStockQuery);
+    const count = lowStockSnapshot.size;
+
+    console.log("✅ [Firebase] Low stock items count:", count);
+    return { success: true, data: count };
+  } catch (error) {
+    console.error("❌ [Firebase] fetchLowStockItemsCount error:", error);
+    return { success: false, error: error.message };
+  }
+}

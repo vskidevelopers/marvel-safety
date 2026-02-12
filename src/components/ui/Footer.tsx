@@ -69,13 +69,12 @@ export function Footer() {
               <li className="flex items-start gap-3">
                 <MapPin className="h-5 w-5 text-orange-500 mt-0.5 flex-shrink-0" />
                 <span>
-                  Enterprise Road, Industrial Area<br />
-                  Nairobi, Kenya
+                  Accra towers, 2nd floor shop S-09 Accra Rd, Nairobi
                 </span>
               </li>
               <li className="flex items-center gap-3">
                 <Phone className="h-5 w-5 text-orange-500 flex-shrink-0" />
-                <span>+254 700 123 456</span>
+                <span>+254 741 900 286</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="h-5 w-5 text-orange-500 flex-shrink-0" />
