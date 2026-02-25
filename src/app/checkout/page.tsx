@@ -234,7 +234,7 @@ export default function CheckoutPage() {
                                             <ol className="text-sm text-gray-700 space-y-1 list-decimal pl-5">
                                                 <li>Go to <strong>M-Pesa</strong> menu on your phone</li>
                                                 <li>Select <strong>Lipa na M-Pesa</strong></li>
-                                                <li>Choose <strong>Buy Goods & Services</strong></li>
+                                                <li>Choose <strong></strong></li>
                                                 <li>Enter Till Number: <span className="font-bold bg-white px-1 rounded">8930612</span></li>
                                                 <li>Enter Amount: <span className="font-bold bg-white px-1 rounded">KES {grandTotal.toFixed(2)}</span></li>
                                                 <li>Enter your M-Pesa PIN</li>
