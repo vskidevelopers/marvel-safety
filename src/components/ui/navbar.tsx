@@ -74,7 +74,7 @@ export function Navbar({ cartCount = 0, isAuthenticated = false }: NavbarProps) 
                             {/* ✅ Logo */}
                             <img
                                 src="/images/marvel-logo.png"
-                                alt="Marvel Safety Logo"
+                                alt="Marvel Safety Suppliers"
                                 className="h-8 w-auto" // Adjust height as needed
                             />
 
