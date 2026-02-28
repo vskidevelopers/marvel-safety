@@ -28,14 +28,16 @@ export function Footer() {
             <div className="flex items-center gap-2">
               <img
                 src="/images/marvel-footer.png"
-                alt="Marvel Safety Logo"
+                alt="Marvel Safety Suppliers"
                 className="h-6 w-auto"
               />
 
             </div>
             <p className="text-gray-400 text-sm leading-relaxed">
-              KEBS-certified wearable PPE supplier serving Nairobi and nationwide Kenya.
-              Trusted by construction firms, apiaries, factories, and healthcare workers.
+              Marvel Safety is Nairobi&lsquo;s most trusted supplier of certified personal protective equipment (PPE),
+              delivering premium overalls, high-visibility reflectors, dustcoats, industrial helmets, safety boots,
+              and custom work uniforms nationwide. Trusted by Kenya&apos;s leading construction firms, apiaries, factories,
+              and healthcare facilities for reliable safety gear that meets the highest quality standards.
             </p>
             <Link
               href="/track"
