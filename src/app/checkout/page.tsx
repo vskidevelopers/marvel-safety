@@ -225,39 +225,40 @@ export default function CheckoutPage() {
                                         </button>
                                     </div>
 
-                                    {/* M-Pesa Instructions (Only when selected) */}
-                                    {paymentMethod === "mpesa" && (
-                                        <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 mb-4">
-                                            <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
-                                                <MapPin className="h-4 w-4" /> M-Pesa Payment Instructions
-                                            </h3>
-                                            <ol className="text-sm text-gray-700 space-y-1 list-decimal pl-5">
-                                                <li>Go to <strong>M-Pesa</strong> menu on your phone</li>
-                                                <li>Select <strong>Lipa na M-Pesa</strong></li>
-                                                <li>Choose <strong></strong></li>
-                                                <li>Enter Till Number: <span className="font-bold bg-white px-1 rounded">8930612</span></li>
-                                                <li>Enter Amount: <span className="font-bold bg-white px-1 rounded">KES {grandTotal.toFixed(2)}</span></li>
-                                                <li>Enter your M-Pesa PIN</li>
-                                            </ol>
+{/* M-Pesa Instructions (Only when selected) */}
+{paymentMethod === "mpesa" && (
+  <div className="border border-orange-200 bg-orange-50 rounded-xl p-4 mb-4">
+    <h3 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
+      <MapPin className="h-4 w-4" /> M-Pesa Payment Instructions
+    </h3>
+    <ol className="text-sm text-gray-700 space-y-1 list-decimal pl-5">
+      <li>Go to <strong>M-Pesa</strong> menu on your phone</li>
+      <li>Select <strong>Lipa na M-Pesa</strong></li>
+      <li>Choose <strong>Pay Bill</strong></li>
+      <li>Enter Business Number: <span className="font-bold bg-white px-1 rounded">822648</span></li>
+      <li>Enter Account Number: <span className="font-bold bg-white px-1 rounded">137200</span></li>
+      <li>Enter Amount: <span className="font-bold bg-white px-1 rounded">KES {grandTotal.toFixed(2)}</span></li>
+      <li>Enter your M-Pesa PIN</li>
+    </ol>
 
-                                            <div className="mt-3">
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                                    M-Pesa Confirmation Code *
-                                                </label>
-                                                <input
-                                                    name="mpesaCode"
-                                                    type="text"
-                                                    required
-                                                    className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
-                                                    placeholder="Enter M-Pesa code (e.g., SAM0...)"
-                                                    autoComplete="off"
-                                                />
-                                                <p className="text-xs text-gray-500 mt-1">
-                                                    Found in your M-Pesa SMS confirmation
-                                                </p>
-                                            </div>
-                                        </div>
-                                    )}
+    <div className="mt-3">
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        M-Pesa Confirmation Code *
+      </label>
+      <input
+        name="mpesaCode"
+        type="text"
+        required
+        className="w-full px-3 py-2 border border-orange-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition"
+        placeholder="Enter M-Pesa code (e.g., SAM0...)"
+        autoComplete="off"
+      />
+      <p className="text-xs text-gray-500 mt-1">
+        Found in your M-Pesa SMS confirmation
+      </p>
+    </div>
+  </div>
+)}
                                 </div>
 
                                 {/* Submit Button */}
