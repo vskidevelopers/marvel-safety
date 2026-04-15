@@ -13,6 +13,9 @@ export default function CheckoutPage() {
     const router = useRouter();
     const [paymentMethod, setPaymentMethod] = useState<"mpesa" | "cod">("cod");
     const [isSubmitting, setIsSubmitting] = useState(false);
+    // State for delivery toggle
+const [includeDelivery, setIncludeDelivery] = useState(true);
+
 
     // Handle empty cart
     if (items.length === 0) {
@@ -34,6 +37,10 @@ export default function CheckoutPage() {
     const vat = subtotal * 0.16;
     const delivery = 300;
     const grandTotal = subtotal + vat + delivery;
+    // Recalculate grand total based on delivery selection
+const calculatedGrandTotal = includeDelivery 
+  ? grandTotal
+  : subtotal + vat;
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -322,24 +329,40 @@ export default function CheckoutPage() {
                                 ))}
                             </div>
 
-                            <div className="border-t border-gray-200 pt-4 space-y-2 text-sm">
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Subtotal</span>
-                                    <span>KES {subtotal.toLocaleString()}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>VAT (16%)</span>
-                                    <span>KES {vat.toFixed(2)}</span>
-                                </div>
-                                <div className="flex justify-between text-gray-600">
-                                    <span>Delivery</span>
-                                    <span className="font-medium">KES {delivery}</span>
-                                </div>
-                                <div className="flex justify-between font-bold text-lg text-gray-900 pt-2 border-t border-dashed border-gray-300">
-                                    <span>Total</span>
-                                    <span>KES {grandTotal.toLocaleString()}</span>
-                                </div>
-                            </div>
+<div className="border-t border-gray-200 pt-4 space-y-2 text-sm">
+  <div className="flex justify-between text-gray-600">
+    <span>Subtotal</span>
+    <span>KES {subtotal.toLocaleString()}</span>
+  </div>
+  <div className="flex justify-between text-gray-600">
+    <span>VAT (16%)</span>
+    <span>KES {vat.toFixed(2)}</span>
+  </div>
+  
+  {/* Delivery Toggle */}
+  <div className="flex items-center justify-between py-2">
+    <div className="flex items-center gap-2">
+      <input
+        type="checkbox"
+        id="delivery-fee"
+        checked={includeDelivery}
+        onChange={(e) => setIncludeDelivery(e.target.checked)}
+        className="h-4 w-4 text-orange-600 focus:ring-orange-500 rounded"
+      />
+      <label htmlFor="delivery-fee" className="text-gray-700 font-medium">
+        Include Delivery (KES {delivery})
+      </label>
+    </div>
+    {includeDelivery && (
+      <span className="font-medium text-gray-900">KES {delivery}</span>
+    )}
+  </div>
+
+  <div className="flex justify-between font-bold text-lg text-gray-900 pt-2 border-t border-dashed border-gray-300">
+    <span>Total</span>
+    <span>KES {calculatedGrandTotal.toLocaleString()}</span>
+  </div>
+</div>
 
                             <div className="mt-4 p-3 bg-orange-50 rounded-lg">
                                 <div className="flex items-start gap-2">
