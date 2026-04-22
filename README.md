@@ -79,28 +79,17 @@ NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID=your_sender_id
 NEXT_PUBLIC_FIREBASE_APP_ID=your_app_id
 
 # Cloudinary Configuration
+
 NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME=your_cloud_name
-📁 Project Structure
-marvel-safety/
-├── app/                    # Next.js App Router
-│   ├── admin/             # Admin dashboard pages
-│   ├── products/          # Product catalog pages
-│   ├── checkout/          # Checkout flow
-│   └── ...                # Other page routes
-├── components/            # Reusable UI components
-│   ├── ui/               # shadcn/ui components
-│   └── admin/            # Admin-specific components
-├── lib/                  # Core utilities and logic
-│   ├── hooks/            # Custom React hooks
-│   ├── firebase.js       # Firebase functions
-│   └── types.ts          # TypeScript interfaces
-├── public/               # Static assets (images, fonts)
-└── ...
+
+
+
 🔧 Admin Access
 Default Admin Credentials
 Email: admin@marvelsafety.co.ke
 Password: Contact system administrator for current password
 Note: Admin credentials should be updated immediately after first login.
+
 📈 SEO & Analytics
 The platform includes comprehensive SEO features:
 Dynamic Metadata: Unique titles/descriptions for all pages
